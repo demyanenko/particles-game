@@ -1,0 +1,31 @@
+{
+	"files.exclude": {
+		"**/.git": true,
+		"**/.svn": true,
+		"**/.hg": true,
+		"**/CVS": true,
+		"**/.DS_Store": true,
+		"**/*.o": true,
+		"**/*.exe": true,
+	},
+	"files.associations": {
+		"array": "c",
+		"bitset": "c",
+		"initializer_list": "c",
+		"utility": "c",
+		"__hash_table": "c",
+		"__split_buffer": "c",
+		"deque": "c",
+		"iterator": "c",
+		"memory": "c",
+		"queue": "c",
+		"random": "c",
+		"string": "c",
+		"unordered_map": "c",
+		"vector": "c",
+		"gridcoord.h": "c",
+		"*.m": "c",
+		"raylib.h": "c",
+		"*.tcc": "c"
+	}
+}

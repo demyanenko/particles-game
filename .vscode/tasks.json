@@ -1,0 +1,65 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build debug",
+            "type": "process",
+            "command": "tcc",
+            "args": [
+                "-o",
+                "main.exe",
+                "*.c",
+                "C:\\raylib\\raylib\\src\\raylib.rc.data",
+                "-std=c99",
+                "-g",
+                "-Wall",
+                "-lmsvcrt",
+                "-lraylib",
+                "-lopengl32",
+                "-lgdi32",
+                "-lwinmm",
+                "-lkernel32",
+                "-lshell32",
+                "-luser32",
+                "-Wl"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "options": {
+                "env": {
+                    "PATH": "C:\\raylib\\tcc"
+                }
+            }
+        },
+        {
+            "label": "build release",
+            "type": "process",
+            "command": "tcc",
+            "args": [
+                "-o",
+                "main.exe",
+                "*.c",
+                "C:\\raylib\\raylib\\src\\raylib.rc.data",
+                "-std=c99",
+                "-Wall",
+                "-lmsvcrt",
+                "-lraylib",
+                "-lopengl32",
+                "-lgdi32",
+                "-lwinmm",
+                "-lkernel32",
+                "-lshell32",
+                "-luser32",
+                "-Wl,-subsystem=gui"
+            ],
+            "group": "build",
+            "options": {
+                "env": {
+                    "PATH": "C:\\raylib\\tcc"
+                }
+            }
+        }
+    ]
+}
