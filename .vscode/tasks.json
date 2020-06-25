@@ -4,12 +4,12 @@
         {
             "label": "build debug",
             "type": "process",
-            "command": "tcc",
+            "command": "gcc",
             "args": [
                 "-o",
                 "main.exe",
                 "*.c",
-                "C:\\raylib\\raylib\\src\\raylib.rc.data",
+                "C:\\raylib-gcc\\raylib\\src\\raylib.rc.data",
                 "-std=c99",
                 "-g",
                 "-Wall",
@@ -20,8 +20,7 @@
                 "-lwinmm",
                 "-lkernel32",
                 "-lshell32",
-                "-luser32",
-                "-Wl"
+                "-luser32"
             ],
             "group": {
                 "kind": "build",
@@ -29,19 +28,19 @@
             },
             "options": {
                 "env": {
-                    "PATH": "C:\\raylib\\tcc"
+                    "PATH": "C:\\raylib-gcc\\mingw\\bin"
                 }
             }
         },
         {
             "label": "build release",
             "type": "process",
-            "command": "tcc",
+            "command": "gcc",
             "args": [
                 "-o",
                 "main.exe",
                 "*.c",
-                "C:\\raylib\\raylib\\src\\raylib.rc.data",
+                "C:\\raylib-gcc\\raylib\\src\\raylib.rc.data",
                 "-std=c99",
                 "-Wall",
                 "-lmsvcrt",
@@ -52,12 +51,12 @@
                 "-lkernel32",
                 "-lshell32",
                 "-luser32",
-                "-Wl,-subsystem=gui"
+                "-subsystem=gui"
             ],
             "group": "build",
             "options": {
                 "env": {
-                    "PATH": "C:\\raylib\\tcc"
+                    "PATH": "C:\\raylib-gcc\\mingw\\bin"
                 }
             }
         }

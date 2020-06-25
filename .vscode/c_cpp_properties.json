@@ -3,8 +3,8 @@
         {
             "name": "Win32",
             "includePath": [
-                "C:/raylib/tcc/include/**",
-                "C:/raylib/raylib/src/**",
+                "C:/raylib-gcc/mingw/include/**",
+                "C:/raylib-gcc/raylib/src/**",
                 "${workspaceFolder}/**",
                 "${workspaceFolder}"
             ],
@@ -15,7 +15,7 @@
                 "GRAPHICS_API_OPENGL_33",
                 "PLATFORM_DESKTOP"
             ],
-            "compilerPath": "C:/raylib/tcc/tcc.exe",
+            "compilerPath": "C:/raylib-gcc/mingw/bin/gcc.exe",
             "cStandard": "c99",
             "cppStandard": "c++14",
             "intelliSenseMode": "clang-x64"
