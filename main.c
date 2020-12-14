@@ -1,28 +1,31 @@
 #include <stdio.h>
 #include "raylib.h"
+#include "particles.c"
 
 #define NELEMS(x) (sizeof(x) / sizeof(x[0]))
 
 int main() {
-	int windowWidth = 3000;
-	int windowHeight = 1500;
+	float scaleFactor = 1.75;
+	float width = 900;
+	float height = 600;
+	int windowWidth = width * scaleFactor;
+	int windowHeight = height * scaleFactor;
 
-	int overlayFontSize = 30;
-	int overlayInset = 10;
+	World world;
+	worldInit(&world, scaleFactor, width, height);
 
 	InitWindow(windowWidth, windowHeight, "Window");
 	SetTargetFPS(60);
 
+	ClearBackground(BLACK);
+
 	while (!WindowShouldClose()) {
+		worldUpdate(&world);
+
 		// Draw
 		BeginDrawing();
 
-		ClearBackground(WHITE);
-		DrawRectangle(100, 100, 100, 100, RED);
-
-		char overlayText[100];
-		snprintf(overlayText, NELEMS(overlayText) - 1, "overlay");
-		DrawText(overlayText, overlayInset, overlayInset, overlayFontSize, DARKGREEN);
+		worldRender(&world);
 
 		EndDrawing();
 	}
