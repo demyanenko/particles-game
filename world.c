@@ -16,12 +16,13 @@ typedef struct
     float baseRepelDistance;
     float maxInteractionRadius;
     int width;
+    int sidebarWidth;
     int height;
     float backgroundTransparency;
     Color backgroundColor;
 } Config;
 
-void configInit(Config *config, float scaleFactor, int width, int height)
+void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, int height)
 {
     config->friction = 0.2;
     config->baseParticleRadius = 2.7;
@@ -30,6 +31,7 @@ void configInit(Config *config, float scaleFactor, int width, int height)
     config->maxInteractionRadius = 30 * config->baseParticleRadius;
     config->scaleFactor = scaleFactor;
     config->width = width;
+    config->sidebarWidth = sidebarWidth;
     config->height = height;
     config->backgroundTransparency = 0.7;
     config->backgroundColor = (Color){0, 0, 0, (1 - config->backgroundTransparency) * 255};
@@ -46,11 +48,11 @@ typedef struct
 
 } World;
 
-#define MAX_PARTICLE_RADIUS 5
+#define MAX_PARTICLE_RADIUS 1
 
-void worldInit(World *world, float scaleFactor, int width, int height)
+void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int height)
 {
-    configInit(&world->config, scaleFactor, width, height);
+    configInit(&world->config, scaleFactor, width, sidebarWidth, height);
 
     initParticleTypes(world->particleTypes);
     float maxInteractionRadius = 0;
@@ -190,7 +192,7 @@ void updateWallCollisions(Particle *particle, Config *config)
 
 int compareInts(const void *a, const void *b)
 {
-    return *(int*)(a) - *(int*)(b);
+    return *(int *)(a) - *(int *)(b);
 }
 
 void worldUpdate(World *world)
@@ -268,5 +270,66 @@ void worldRender(World *world)
             particle->y * scaleFactor,
             particle->radius * world->config.baseParticleRadius * scaleFactor,
             world->particleTypes[particle->type].color);
+    }
+
+    int cellWidth = world->config.sidebarWidth / PARTICLE_TYPE_COUNT * 2;
+    int cellHeight = world->config.sidebarWidth / PARTICLE_TYPE_COUNT / 2;
+    char stepsStr[2];
+    int stepsFontSize = 10;
+    int stepsOffset = 5;
+    for (int i = 0; i < PARTICLE_TYPE_COUNT; i++)
+    {
+        int cellX = world->config.width + (i / 2) * cellWidth;
+        int steps = world->particleTypes[i].steps;
+        snprintf(stepsStr, 2, "%i", steps);
+        for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
+        {
+            int cellY = (i % 2 * PARTICLE_TYPE_COUNT + j) * cellHeight;
+            float interactionRadius = world->particleTypes[i].radius[j];
+            float force = world->particleTypes[i].force[j] * 10;
+            DrawCircle(
+                (cellX + cellWidth / 2) * scaleFactor,
+                (cellY + cellHeight / 2) * scaleFactor,
+                world->config.baseParticleRadius * scaleFactor,
+                world->particleTypes[i].color);
+            DrawCircle(
+                (cellX + cellWidth / 2 + interactionRadius) * scaleFactor,
+                (cellY + cellHeight / 2) * scaleFactor,
+                world->config.baseParticleRadius * scaleFactor,
+                world->particleTypes[j].color);
+            DrawLineEx(
+                (Vector2){
+                    (cellX + cellWidth / 2) * scaleFactor,
+                    (cellY + cellHeight / 2) * scaleFactor},
+                (Vector2){
+                    (cellX + cellWidth / 2 + force) * scaleFactor,
+                    (cellY + cellHeight / 2) * scaleFactor},
+                scaleFactor,
+                GRAY);
+            DrawLineEx(
+                (Vector2){
+                    (cellX + cellWidth / 2 + force * 0.9) * scaleFactor,
+                    (cellY + cellHeight / 2 - force * 0.05) * scaleFactor},
+                (Vector2){
+                    (cellX + cellWidth / 2 + force) * scaleFactor,
+                    (cellY + cellHeight / 2) * scaleFactor},
+                scaleFactor,
+                GRAY);
+            DrawLineEx(
+                (Vector2){
+                    (cellX + cellWidth / 2 + force * 0.9) * scaleFactor,
+                    (cellY + cellHeight / 2 + force * 0.05) * scaleFactor},
+                (Vector2){
+                    (cellX + cellWidth / 2 + force) * scaleFactor,
+                    (cellY + cellHeight / 2) * scaleFactor},
+                scaleFactor,
+                GRAY);
+            DrawText(
+                stepsStr,
+                (cellX + cellWidth / 2 + force * 0.5 - stepsFontSize / 2) * scaleFactor,
+                (cellY + cellHeight / 2 - stepsFontSize - stepsOffset) * scaleFactor,
+                stepsFontSize * scaleFactor,
+                GRAY);
+        }
     }
 }

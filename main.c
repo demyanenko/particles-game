@@ -5,17 +5,18 @@
 #define NELEMS(x) (sizeof(x) / sizeof(x[0]))
 
 int main() {
-	float scaleFactor = 1.75;
-	float width = 1600;
-	float height = 1100;
-	int windowWidth = width * scaleFactor;
+	float scaleFactor = 2;
+	float worldWidth = 600;
+	float sidebarWidth = 800;
+	float height = 800;
+	int windowWidth = (worldWidth + sidebarWidth) * scaleFactor;
 	int windowHeight = height * scaleFactor;
 
 	int overlayFontSize = 30;
 	int overlayInset = 10;
 
 	World world;
-	worldInit(&world, scaleFactor, width, height);
+	worldInit(&world, scaleFactor, worldWidth, sidebarWidth, height);
 
 	InitWindow(windowWidth, windowHeight, "Window");
 	SetTargetFPS(60);
