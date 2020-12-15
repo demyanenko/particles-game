@@ -46,6 +46,8 @@ typedef struct
 
 } World;
 
+#define MAX_PARTICLE_RADIUS 5
+
 void worldInit(World *world, float scaleFactor, int width, int height)
 {
     configInit(&world->config, scaleFactor, width, height);
@@ -56,7 +58,7 @@ void worldInit(World *world, float scaleFactor, int width, int height)
     {
         for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
         {
-            float radius = world->particleTypes[i].radius[j];
+            float radius = world->particleTypes[i].radius[j] * MAX_PARTICLE_RADIUS;
             if (radius > maxInteractionRadius)
             {
                 maxInteractionRadius = radius;
@@ -70,7 +72,7 @@ void worldInit(World *world, float scaleFactor, int width, int height)
         int particleType = i * PARTICLE_TYPE_COUNT / PARTICLE_COUNT;
         float x = (float)(rand()) / RAND_MAX * width;
         float y = (float)(rand()) / RAND_MAX * height;
-        float size = 1 + powf((float)(rand()) / RAND_MAX, 3) * 4;
+        float size = 1 + powf((float)(rand()) / RAND_MAX, 5) * (MAX_PARTICLE_RADIUS - 1);
         particleInit(world->particles + i, particleType, x, y, size);
     }
 
