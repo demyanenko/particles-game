@@ -26,6 +26,7 @@
 		"gridcoord.h": "c",
 		"*.m": "c",
 		"raylib.h": "c",
-		"*.tcc": "c"
+		"*.tcc": "c",
+		"limits": "c"
 	}
 }

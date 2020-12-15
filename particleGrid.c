@@ -26,9 +26,8 @@ void particleCellAdd(ParticleCell *particleCell, Particle *particle)
         abortWithMessage("Particle cell capacity exceeded");
     }
 
-    int posWithinCell = particleCell->count;
-    particle->posWithinCell = posWithinCell;
-    particleCell->particles[posWithinCell] = particle;
+    particle->posWithinCell = particleCell->count;
+    particleCell->particles[particleCell->count] = particle;
     particleCell->count++;
 }
 
@@ -52,12 +51,6 @@ typedef struct
     int row;
 } ParticleCellCoord;
 
-ParticleCellCoord particleCellCoordShift(
-    ParticleCellCoord cellCoord, int columnOffset, int rowOffset)
-{
-    return (ParticleCellCoord){ cellCoord.column + columnOffset, cellCoord.row + rowOffset };
-}
-
 typedef struct
 {
     int columnCount;
@@ -70,7 +63,9 @@ ParticleCellCoord particleGridGetCellCoord(ParticleGrid *particleGrid, Particle 
 {
     int column = (int)(particle->x / particleGrid->cellSize);
     int row = (int)(particle->y / particleGrid->cellSize);
-    return (ParticleCellCoord){ column, row };
+    int clampedColumn = max(0, min(particleGrid->columnCount - 1, column));
+    int clampedRow = max(0, min(particleGrid->rowCount - 1, row));
+    return (ParticleCellCoord){clampedColumn, clampedRow};
 }
 
 int particleGridCellCoordToIndex(ParticleGrid *particleGrid, ParticleCellCoord cellCoord)
@@ -101,6 +96,7 @@ void particleGridInit(
     {
         Particle *particle = particles + i;
         int cellIndex = particleGridFindCellIndex(particleGrid, particle);
+        particle->cellIndex = cellIndex;
         particleCellAdd(particleGrid->particleCells + cellIndex, particle);
     }
 }
@@ -108,57 +104,32 @@ void particleGridInit(
 // max 9 indices
 int particleGridGetNeighborhoodIndices(ParticleGrid *particleGrid, Particle *particle, int *outIndices)
 {
+    int xOffsets[9] = {0, -1, 0, 1, 1, 1, 0, -1, -1};
+    int yOffsets[9] = {0, -1, -1, -1, 0, 1, 1, 1, 0};
+
     int cellCount = 0;
     ParticleCellCoord centerCellCoord = particleGridGetCellCoord(particleGrid, particle);
-    outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, centerCellCoord);
-    
-    if (centerCellCoord.column > 0 && centerCellCoord.row > 0)
+    for (int i = 0; i < 9; i++)
     {
-        ParticleCellCoord northWestCellCoord = particleCellCoordShift(centerCellCoord, -1, -1);
-        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, northWestCellCoord);
-    }
+        int xOffset = xOffsets[i];
+        bool isXWithinBounds = (xOffset == -1 && centerCellCoord.column > 0) ||
+            xOffset == 0 ||
+            (xOffset == 1 && centerCellCoord.column < particleGrid->columnCount - 1);
+        
+        int yOffset = yOffsets[i];
+        bool isYWithinBounds = (yOffset == -1 && centerCellCoord.row > 0) ||
+            yOffset == 0 ||
+            (yOffset == 1 && centerCellCoord.row < particleGrid->rowCount - 1);
+        
+        if (!isXWithinBounds || !isYWithinBounds)
+        {
+            continue;
+        }
 
-    if (centerCellCoord.row > 0)
-    {
-        ParticleCellCoord northCellCoord = particleCellCoordShift(centerCellCoord, 0, -1);
-        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, northCellCoord);
-    }
-    
-    if (centerCellCoord.column < particleGrid->columnCount - 1 && centerCellCoord.row > 0)
-    {
-        ParticleCellCoord northEastCellCoord = particleCellCoordShift(centerCellCoord, 1, -1);
-        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, northEastCellCoord);
-    }
-
-    if (centerCellCoord.column < particleGrid->columnCount - 1)
-    {
-        ParticleCellCoord eastCellCoord = particleCellCoordShift(centerCellCoord, 1, 0);
-        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, eastCellCoord);
-    }
-    
-    if (centerCellCoord.column < particleGrid->columnCount - 1 &&
-        centerCellCoord.row < particleGrid->rowCount - 1)
-    {
-        ParticleCellCoord southEastCellCoord = particleCellCoordShift(centerCellCoord, 1, 1);
-        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, southEastCellCoord);
-    }
-    
-    if (centerCellCoord.row < particleGrid->rowCount - 1)
-    {
-        ParticleCellCoord southCellCoord = particleCellCoordShift(centerCellCoord, 0, 1);
-        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, southCellCoord);
-    }
-    
-    if (centerCellCoord.column > 0 && centerCellCoord.row < particleGrid->rowCount - 1)
-    {
-        ParticleCellCoord southWestCellCoord = particleCellCoordShift(centerCellCoord, -1, 1);
-        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, southWestCellCoord);
-    }
-
-    if (centerCellCoord.column > 0)
-    {
-        ParticleCellCoord westCellCoord = particleCellCoordShift(centerCellCoord, -1, 0);
-        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, westCellCoord);
+        ParticleCellCoord cellCoord = (ParticleCellCoord){
+            centerCellCoord.column + xOffset,
+            centerCellCoord.row + yOffset};
+        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, cellCoord);
     }
 
     return cellCount;
@@ -173,5 +144,6 @@ void particleGridUpdateCell(
     {
         particleCellRemove(particleCells + oldCellIndex, particle);
         particleCellAdd(particleCells + newCellIndex, particle);
+        particle->cellIndex = newCellIndex;
     }
 }

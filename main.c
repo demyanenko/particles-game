@@ -6,8 +6,8 @@
 
 int main() {
 	float scaleFactor = 1.75;
-	float width = 900;
-	float height = 600;
+	float width = 1600;
+	float height = 1100;
 	int windowWidth = width * scaleFactor;
 	int windowHeight = height * scaleFactor;
 
