@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include "particle.c"
+#include "particleGrid.c"
 #include "particleTypes.c"
 
 typedef struct
@@ -33,46 +35,35 @@ void configInit(Config *config, float scaleFactor, int width, int height)
     config->backgroundColor = (Color){0, 0, 0, (1 - config->backgroundTransparency) * 255};
 }
 
-#define MAX_STEPS 4
-
-typedef struct
-{
-    int type;
-    float x;
-    float y;
-    float xv;
-    float yv;
-    float xf[MAX_STEPS];
-    float yf[MAX_STEPS];
-} Particle;
-
-void particleInit(Particle *particle, int type, float x, float y)
-{
-    particle->type = type;
-    particle->x = x;
-    particle->y = y;
-    particle->xv = 0;
-    particle->yv = 0;
-    for (int i = 0; i < MAX_STEPS; i++)
-    {
-        particle->xf[i] = 0;
-        particle->yf[i] = 0;
-    }
-}
-
-#define PARTICLE_COUNT 600
+#define PARTICLE_COUNT 2000
 
 typedef struct
 {
     Config config;
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
+    ParticleGrid particleGrid;
+
 } World;
 
 void worldInit(World *world, float scaleFactor, int width, int height)
 {
     configInit(&world->config, scaleFactor, width, height);
+
     initParticleTypes(world->particleTypes);
+    float maxInteractionRadius = 0;
+    for (int i = 0; i < PARTICLE_TYPE_COUNT; i++)
+    {
+        for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
+        {
+            float radius = world->particleTypes[i].radius[j];
+            if (radius > maxInteractionRadius)
+            {
+                maxInteractionRadius = radius;
+            }
+        }
+    }
+
     srand(time(0));
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
@@ -81,59 +72,74 @@ void worldInit(World *world, float scaleFactor, int width, int height)
         float y = (float)(rand()) / RAND_MAX * height;
         particleInit(world->particles + i, particleType, x, y);
     }
+
+    particleGridInit(
+        &world->particleGrid, width, height, ceilf(maxInteractionRadius), world->particles,
+        PARTICLE_COUNT);
 }
 
-void updateParticleInteractions(
-    Particle *particles, ParticleType *particleType, Config *config, int particleIndex)
+void updateParticleInteractions(World *world, ParticleType *particleType, int particleIndex)
 {
+    Particle *particles = world->particles;
+    Config *config = &world->config;
+    Particle *particle = particles + particleIndex;
+
     float sumXf = 0;
     float sumYf = 0;
     int interactionCount = 0;
-    for (int i = 0; i < PARTICLE_COUNT; i++)
-    {
-        if (i == particleIndex)
-        {
-            continue;
-        }
 
-        float deltaX = particles[i].x - particles[particleIndex].x;
-        float deltaY = particles[i].y - particles[particleIndex].y;
-        float distanceSquared = deltaX * deltaX + deltaY * deltaY;
-        float interactionRadius = particleType->radius[particles[i].type];
-        if (distanceSquared < interactionRadius * interactionRadius)
+    int cellIndices[9];
+    int cellCount = particleGridGetNeighborhoodIndices(&world->particleGrid, particle, cellIndices);
+    for (int i = 0; i < cellCount; i++)
+    {
+        ParticleCell *particleCell = world->particleGrid.particleCells + cellIndices[i];
+        for (int j = 0; j < particleCell->count; j++)
         {
-            if (distanceSquared == 0)
+            Particle *otherParticle = particleCell->particles[j];
+            if (otherParticle == particle)
             {
-                printf("Warning: particles occupy exactly same spot\n");
                 continue;
             }
 
-            float distance = sqrtf(distanceSquared);
-            if (distance < config->repelDistance)
+            float deltaX = otherParticle->x - particle->x;
+            float deltaY = otherParticle->y - particle->y;
+            float distanceSquared = deltaX * deltaX + deltaY * deltaY;
+            float interactionRadius = particleType->radius[otherParticle->type];
+            if (distanceSquared < interactionRadius * interactionRadius)
             {
-                float repelX = deltaX / distance;
-                float repelY = deltaY / distance;
-                float repelAmount = 1.0 - distance / config->repelDistance;
-                particles[particleIndex].xv -= repelX * repelAmount;
-                particles[particleIndex].yv -= repelY * repelAmount;
+                if (distanceSquared == 0)
+                {
+                    printf("Warning: particles occupy exactly same spot\n");
+                    continue;
+                }
+
+                float distance = sqrtf(distanceSquared);
+                if (distance < config->repelDistance)
+                {
+                    float repelX = deltaX / distance;
+                    float repelY = deltaY / distance;
+                    float repelAmount = 1.0 - distance / config->repelDistance;
+                    particle->xv -= repelX * repelAmount;
+                    particle->yv -= repelY * repelAmount;
+                }
+                float interactionForce = particleType->force[otherParticle->type];
+                sumXf += deltaX / distance * interactionForce;
+                sumYf += deltaY / distance * interactionForce;
+                interactionCount++;
             }
-            float interactionForce = particleType->force[particles[i].type];
-            sumXf += deltaX / distance * interactionForce;
-            sumYf += deltaY / distance * interactionForce;
-            interactionCount++;
         }
     }
 
     int lastStepIndex = particleType->steps;
     if (interactionCount > 0)
     {
-        particles[particleIndex].xf[lastStepIndex] = sumXf / interactionCount;
-        particles[particleIndex].yf[lastStepIndex] = sumYf / interactionCount;
+        particle->xf[lastStepIndex] = sumXf / interactionCount;
+        particle->yf[lastStepIndex] = sumYf / interactionCount;
     }
     else
     {
-        particles[particleIndex].xf[lastStepIndex] = 0;
-        particles[particleIndex].yf[lastStepIndex] = 0;
+        particle->xf[lastStepIndex] = 0;
+        particle->yf[lastStepIndex] = 0;
     }
 }
 
@@ -179,21 +185,28 @@ void worldUpdate(World *world)
     Particle *particles = world->particles;
     ParticleType *particleTypes = world->particleTypes;
     Config *config = &world->config;
+    ParticleGrid *particleGrid = &world->particleGrid;
+
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
-        particles[i].xv *= (1.0 - config->friction);
-        particles[i].yv *= (1.0 - config->friction);
-        particles[i].x += particles[i].xv;
-        particles[i].y += particles[i].yv;
-        ParticleType *particleType = particleTypes + particles[i].type;
-        updateParticleInteractions(particles, particleType, config, i);
+        Particle *particle = particles + i;
+        particle->xv *= (1.0 - config->friction);
+        particle->yv *= (1.0 - config->friction);
+
+        int oldCellIndex = particleGridFindCellIndex(particleGrid, particle);
+        particle->x += particle->xv;
+        particle->y += particle->yv;
+        particleGridUpdateCell(particleGrid, particle, i, oldCellIndex);
+
+        ParticleType *particleType = particleTypes + particle->type;
+        updateParticleInteractions(world, particleType, i);
         for (int j = 0; j < particleType->steps; j++)
         {
-            particles[i].xf[j] = particles[i].xf[j + 1];
-            particles[i].yf[j] = particles[i].yf[j + 1];
+            particle->xf[j] = particle->xf[j + 1];
+            particle->yf[j] = particle->yf[j + 1];
         }
-        particles[i].xv += particles[i].xf[0];
-        particles[i].yv += particles[i].yf[0];
+        particle->xv += particle->xf[0];
+        particle->yv += particle->yf[0];
         updateWallCollisions(&particles[i], config);
     }
 }
