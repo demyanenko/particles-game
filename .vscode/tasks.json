@@ -42,6 +42,7 @@
                 "main.c",
                 "C:\\raylib-gcc\\raylib\\src\\raylib.rc.data",
                 "-std=c99",
+                "-O3",
                 "-Wall",
                 "-lmsvcrt",
                 "-lraylib",
