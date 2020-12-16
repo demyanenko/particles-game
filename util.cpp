@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+[[noreturn]]
 void abortWithMessage(const char *message)
 {
     printf("Aborting: %s\n", message);

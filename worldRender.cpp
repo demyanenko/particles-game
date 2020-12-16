@@ -31,10 +31,11 @@ void worldRender(World *world)
 
     for (int i = 0; i < world->activeSnapPointCount; i++)
     {
-        ActiveSnapPoint snapPoint = world->activeSnapPoints[i];
+        SnapPoint snapPoint = world->activeSnapPoints[i];
+        SnapPointPos snapPointPos = snapPointGetPos(snapPoint, world);
         DrawCircle(
-            snapPoint.x * scaleFactor,
-            snapPoint.y * scaleFactor,
+            snapPointPos.x * scaleFactor,
+            snapPointPos.y * scaleFactor,
             world->config.snapPointRadius * scaleFactor,
             (Color){255, 255, 255, 31});
     }
@@ -52,8 +53,8 @@ void worldRender(World *world)
             DrawCircle(
                 particle->x * scaleFactor,
                 particle->y * scaleFactor,
-                particle->radius * 0.3 * scaleFactor,
-                BLACK);
+                0.3 * scaleFactor,
+                WHITE);
         }
     }
 
@@ -64,7 +65,7 @@ void worldRender(World *world)
         (Vector2){
             float(world->particles[0].x) * scaleFactor,
             float(world->particles[0].y) * scaleFactor},
-        scaleFactor,
+        0.5 * scaleFactor,
         WHITE);
 
     int cellWidth = world->config.sidebarWidth / PARTICLE_TYPE_COUNT * 2;

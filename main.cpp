@@ -7,7 +7,7 @@
 #define NELEMS(x) (sizeof(x) / sizeof(x[0]))
 
 int main() {
-	float scaleFactor = 7;
+	float scaleFactor = 8;
 	float worldWidth = 250;
 	float sidebarWidth = 0;
 	float height = 250;

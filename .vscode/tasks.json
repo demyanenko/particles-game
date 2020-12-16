@@ -20,7 +20,8 @@
                 "-lwinmm",
                 "-lkernel32",
                 "-lshell32",
-                "-luser32"
+                "-luser32",
+                "-fno-exceptions"
             ],
             "group": {
                 "kind": "build",
@@ -51,7 +52,8 @@
                 "-lwinmm",
                 "-lkernel32",
                 "-lshell32",
-                "-luser32"
+                "-luser32",
+                "-fno-exceptions"
             ],
             "group": "build",
             "options": {

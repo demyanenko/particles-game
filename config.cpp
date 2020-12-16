@@ -11,6 +11,7 @@ struct Config
     float baseRepelFactor;
     float snapPointRadius;
     float snapPointForce;
+    int maxSnapDepth;
     float playerThrottleAmount;
     float playerTurnAmount;
     float scaleFactor;
@@ -23,13 +24,14 @@ struct Config
 
 void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, int height)
 {
-    config->physicsStepsPerFrame = 50;
+    config->physicsStepsPerFrame = 20;
     config->dt = 1.0 / 60 / config->physicsStepsPerFrame;
     config->friction = 30;
     config->baseRepelRadius = 1.5;
     config->baseRepelFactor = 3600;
     config->snapPointRadius = sqrt(2);
-    config->snapPointForce = 100000;
+    config->snapPointForce = 10000;
+    config->maxSnapDepth = 5;
     config->playerThrottleAmount = 1800;
     config->playerTurnAmount = 0.6 * PI;
     config->scaleFactor = scaleFactor;

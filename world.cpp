@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include "config.cpp"
+#include "hashMap.cpp"
 #include "particle.cpp"
 #include "particleGrid.cpp"
 #include "particleTypes.cpp"
@@ -26,13 +27,29 @@ struct ActiveSnapPoint
     double y;
 };
 
+struct SnapPoint
+{
+    int u;
+    int v;
+};
+
+SnapPoint snapPointCreate(int u, int v)
+{
+    return (SnapPoint){u, v};
+}
+
+int snapPointGetKey(SnapPoint snapPoint)
+{
+    return 10000 * snapPoint.u + snapPoint.v;
+}
+
 struct World
 {
     Config config;
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
-    Particle *snappedParticles[SNAP_POINT_COUNT];
-    ActiveSnapPoint activeSnapPoints[SNAP_POINT_COUNT];
+    HashMap<int, Particle *> snappedParticles;
+    SnapPoint activeSnapPoints[SNAP_POINT_COUNT];
     int activeSnapPointCount;
     ParticleGrid particleGrid;
     double playerAngle;
@@ -67,10 +84,7 @@ void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int
         particleInit(world->particles + i, particleType, x, y, 1);
     }
 
-    for (int i = 0; i < SNAP_POINT_COUNT; i++)
-    {
-        world->snappedParticles[i] = NULL;
-    }
+    hashMapInit(&world->snappedParticles);
 
     world->activeSnapPointCount = 0;
 
@@ -79,4 +93,24 @@ void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int
         PARTICLE_COUNT);
 
     world->playerAngle = PI / 2;
+}
+
+struct SnapPointPos
+{
+    double x;
+    double y;
+};
+
+SnapPointPos snapPointGetPos(SnapPoint snapPoint, World *world)
+{
+    double snapStep = 3;
+    double fwdAngle = world->playerAngle;
+    double sideAngle = world->playerAngle - PI / 2;
+    double snapPointX = world->particles[0].x;
+    double snapPointY = world->particles[0].y;
+    snapPointX += snapPoint.u * cos(sideAngle) * snapStep;
+    snapPointY -= snapPoint.u * sin(sideAngle) * snapStep;
+    snapPointX += snapPoint.v * cos(fwdAngle) * snapStep;
+    snapPointY -= snapPoint.v * sin(fwdAngle) * snapStep;
+    return {snapPointX, snapPointY};
 }
