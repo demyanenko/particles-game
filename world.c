@@ -14,7 +14,10 @@ typedef struct
     float baseParticleRadius;
     float repelRadius;
     float baseRepelDistance;
+    float repelForce;
     float maxInteractionRadius;
+    float playerThrottleAmount;
+    float playerTurnAmount;
     int width;
     int sidebarWidth;
     int height;
@@ -28,7 +31,10 @@ void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, 
     config->baseParticleRadius = 2.7;
     config->repelRadius = 1.6 * config->baseParticleRadius;
     config->baseRepelDistance = 2 * config->repelRadius;
+    config->repelForce = 5;
     config->maxInteractionRadius = 30 * config->baseParticleRadius;
+    config->playerThrottleAmount = 1;
+    config->playerTurnAmount = 0.01 * PI;
     config->scaleFactor = scaleFactor;
     config->width = width;
     config->sidebarWidth = sidebarWidth;
@@ -37,7 +43,7 @@ void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, 
     config->backgroundColor = (Color){0, 0, 0, (1 - config->backgroundTransparency) * 255};
 }
 
-#define PARTICLE_COUNT 1000
+#define PARTICLE_COUNT 400
 
 typedef struct
 {
@@ -45,10 +51,8 @@ typedef struct
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
     ParticleGrid particleGrid;
-
+    float playerAngle;
 } World;
-
-#define MAX_PARTICLE_RADIUS 1
 
 void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int height)
 {
@@ -60,7 +64,7 @@ void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int
     {
         for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
         {
-            float radius = world->particleTypes[i].radius[j] * MAX_PARTICLE_RADIUS;
+            float radius = world->particleTypes[i].radius[j];
             if (radius > maxInteractionRadius)
             {
                 maxInteractionRadius = radius;
@@ -68,19 +72,30 @@ void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int
         }
     }
 
+    particleInit(world->particles, 0, width / 2, height / 2, 4);
     srand(time(0));
-    for (int i = 0; i < PARTICLE_COUNT; i++)
+    for (int i = 1; i < PARTICLE_COUNT; i++)
     {
-        int particleType = i * PARTICLE_TYPE_COUNT / PARTICLE_COUNT;
+        int particleType = 2;
         float x = (float)(rand()) / RAND_MAX * width;
         float y = (float)(rand()) / RAND_MAX * height;
-        float size = 1 + powf((float)(rand()) / RAND_MAX, 5) * (MAX_PARTICLE_RADIUS - 1);
+        float size = 1;
         particleInit(world->particles + i, particleType, x, y, size);
     }
 
     particleGridInit(
         &world->particleGrid, width, height, ceilf(maxInteractionRadius), world->particles,
         PARTICLE_COUNT);
+
+    world->playerAngle = PI / 2;
+}
+
+void worldMovePlayer(World *world, int throttleDelta, int angleDelta)
+{
+    world->playerAngle = fmodf(world->playerAngle + angleDelta * world->config.playerTurnAmount, PI * 2);
+    float throttle = throttleDelta * world->config.playerThrottleAmount;
+    world->particles[0].xv = cosf(world->playerAngle) * throttle;
+    world->particles[0].yv = -sinf(world->playerAngle) * throttle;
 }
 
 void updateParticleInteractions(World *world, ParticleType *particleType, int particleIndex)
@@ -108,30 +123,33 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
 
             float deltaX = otherParticle->x - particle->x;
             float deltaY = otherParticle->y - particle->y;
-            float distanceSquared = deltaX * deltaX + deltaY * deltaY;
-            if (distanceSquared == 0)
+            float distance = sqrtf(deltaX * deltaX + deltaY * deltaY);
+            if (distance == 0)
             {
                 printf("Warning: particles occupy exactly same spot\n");
                 continue;
             }
 
-            float repelDistance = config->baseRepelDistance * (particle->radius + otherParticle->radius);
-            if (distanceSquared < repelDistance * repelDistance)
+            float repelDistance = particleType->repelRadius[otherParticle->type] * config->baseParticleRadius;
+            float interactionRadius = particleType->radius[otherParticle->type];
+            if (distance < repelDistance)
             {
-
-                float distance = sqrtf(distanceSquared);
                 float repelX = deltaX / distance;
                 float repelY = deltaY / distance;
-                float repelAmount = 1.0 - distance / repelDistance;
+                float repelAmount = config->repelForce * (1.0 - distance / repelDistance);
                 particle->xv -= repelX * repelAmount;
                 particle->yv -= repelY * repelAmount;
             }
-
-            float interactionRadius = particleType->radius[otherParticle->type] * otherParticle->radius;
-            if (distanceSquared < interactionRadius * interactionRadius)
+            else if (distance < interactionRadius)
             {
-                float distance = sqrtf(distanceSquared);
-                float interactionForce = particleType->force[otherParticle->type] * otherParticle->radius;
+                int inheritSpeed = particleType->inheritSpeed[otherParticle->type];
+                float falloff = 1.0 - (distance - repelDistance) / (interactionRadius - repelDistance);
+
+                particle->xv += inheritSpeed * falloff * (otherParticle->xv - particle->xv);
+                particle->yv += inheritSpeed * falloff * (otherParticle->yv - particle->yv);
+
+                float forceFalloff = inheritSpeed > 0 ? 1.0 - falloff : falloff;
+                float interactionForce = particleType->force[otherParticle->type] * forceFalloff;
                 sumXf += deltaX / distance * interactionForce;
                 sumYf += deltaY / distance * interactionForce;
                 interactionCount++;
@@ -195,12 +213,14 @@ int compareInts(const void *a, const void *b)
     return *(int *)(a) - *(int *)(b);
 }
 
-void worldUpdate(World *world)
+void worldUpdate(World *world, bool isPlayerAttractive)
 {
     Particle *particles = world->particles;
     ParticleType *particleTypes = world->particleTypes;
     Config *config = &world->config;
     ParticleGrid *particleGrid = &world->particleGrid;
+
+    particles[0].type = isPlayerAttractive ? 1 : 0;
 
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
@@ -271,6 +291,16 @@ void worldRender(World *world)
             particle->radius * world->config.baseParticleRadius * scaleFactor,
             world->particleTypes[particle->type].color);
     }
+
+    DrawLineEx(
+        (Vector2){
+            (world->particles[0].x + cos(world->playerAngle) * 10) * scaleFactor,
+            (world->particles[0].y - sin(world->playerAngle) * 10) * scaleFactor},
+        (Vector2){
+            (world->particles[0].x) * scaleFactor,
+            (world->particles[0].y) * scaleFactor},
+        2 * scaleFactor,
+        WHITE);
 
     int cellWidth = world->config.sidebarWidth / PARTICLE_TYPE_COUNT * 2;
     int cellHeight = world->config.sidebarWidth / PARTICLE_TYPE_COUNT / 2;

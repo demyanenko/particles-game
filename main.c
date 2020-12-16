@@ -24,8 +24,13 @@ int main() {
 	ClearBackground(BLACK);
 
 	while (!WindowShouldClose()) {
+		int playerAngleDelta = (int)(IsKeyDown(KEY_A)) - (int)(IsKeyDown(KEY_D));
+		int playerThrottle = IsKeyDown(KEY_W);
+		worldMovePlayer(&world, playerThrottle, playerAngleDelta);
+
+		bool isAttracting = IsKeyDown(KEY_SPACE);
 		float updateStartTime = GetTime();
-		worldUpdate(&world);
+		worldUpdate(&world, isAttracting);
 		float updateEndTime = GetTime();
 		float updateTimeMs = (updateEndTime - updateStartTime) * 1000;
 
