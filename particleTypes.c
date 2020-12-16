@@ -25,8 +25,8 @@ void initParticleTypes(ParticleType *particleTypes)
     particleTypes[1].force[0] = 0.5;
     particleTypes[1].radius[0] = 50;
 
-    particleTypes[1].force[1] = 0.5;
-    particleTypes[1].radius[1] = 16.2;
+    particleTypes[1].force[1] = 0.01;
+    particleTypes[1].radius[1] = 32;
 
     particleTypes[1].steps = 0;
 }

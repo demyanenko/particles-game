@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include "config.c"
 #include "particle.c"
@@ -9,12 +10,14 @@
 #include "particleTypes.c"
 
 #define PARTICLE_COUNT 500
+#define ATTRACTION_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
 
 typedef struct
 {
     Config config;
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
+    Particle *attractedParticles[ATTRACTION_POINT_COUNT];
     ParticleGrid particleGrid;
     float playerAngle;
 } World;
@@ -49,6 +52,11 @@ void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int
         float y = (float)(rand()) / RAND_MAX * height;
         float size = 1 + powf((float)(rand()) / RAND_MAX, 5) * (MAX_PARTICLE_RADIUS - 1);
         particleInit(world->particles + i, particleType, x, y, size);
+    }
+
+    for (int i = 0; i < ATTRACTION_POINT_COUNT; i++)
+    {
+        world->attractedParticles[i] = NULL;
     }
 
     particleGridInit(
@@ -98,14 +106,13 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
                 continue;
             }
 
-            float repelDistance = config->baseRepelDistance * (particle->radius + otherParticle->radius);
+            float repelDistance = config->baseRepelRadius * (particle->radius + otherParticle->radius);
             if (distanceSquared < repelDistance * repelDistance)
             {
-
                 float distance = sqrtf(distanceSquared);
                 float repelX = deltaX / distance;
                 float repelY = deltaY / distance;
-                float repelAmount = 1.0 - distance / repelDistance;
+                float repelAmount = config->repelFactor * (1.0 - distance / repelDistance);
                 particle->xv -= repelX * repelAmount;
                 particle->yv -= repelY * repelAmount;
             }
@@ -132,6 +139,195 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
     {
         particle->xa[lastStepIndex] = 0;
         particle->ya[lastStepIndex] = 0;
+    }
+}
+
+typedef struct
+{
+    int index;
+    float x;
+    float y;
+} ActiveAttractionPoint;
+
+void updateAttractedParticles(
+    World *world, ActiveAttractionPoint *activeAttractionPoints, int *outActiveAttractionPointCount,
+    bool isPlayerAttractive)
+{
+    Config *config = &world->config;
+    Particle *particles = world->particles;
+    Particle *player = particles;
+    Particle **attractedParticles = world->attractedParticles;
+
+    Particle *newAttractedParticles[ATTRACTION_POINT_COUNT];
+    for (int i = 0; i < ATTRACTION_POINT_COUNT; i++)
+    {
+        newAttractedParticles[i] = NULL;
+    }
+
+    Particle *attractedParticleQueue[PARTICLE_COUNT];
+    int bfsPopIndex = 0;
+    int bfsPushIndex = 0;
+    bool bfsVisited[PARTICLE_COUNT];
+    for (int i = 0; i < PARTICLE_COUNT; i++)
+    {
+        bfsVisited[i] = false;
+    }
+
+    if (isPlayerAttractive)
+    {
+        int a = 0;
+    }
+
+    for (int i = 0; i < 6; i++)
+    {
+        float attractionPointAngle = world->playerAngle + PI / 6 + i * PI / 3;
+        float attractionPointDistance = (player->radius + 2) * config->baseParticleRadius;
+        float attractionPointX = player->x + attractionPointDistance * cosf(attractionPointAngle);
+        float attractionPointY = player->y - attractionPointDistance * sinf(attractionPointAngle);
+        ActiveAttractionPoint attractionPoint = {i, attractionPointX, attractionPointY};
+        if (isPlayerAttractive)
+        {
+            activeAttractionPoints[*outActiveAttractionPointCount] = attractionPoint;
+            *outActiveAttractionPointCount += 1;
+        }
+
+        Particle *attractedParticle = attractedParticles[i];
+        if (attractedParticle == NULL)
+        {
+            continue;
+        }
+
+        float deltaX = attractedParticle->x - attractionPointX;
+        float deltaY = attractedParticle->y - attractionPointY;
+        float distance = sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (distance >= attractedParticle->radius * config->attractionPointRadius)
+        {
+            continue;
+        }
+
+        newAttractedParticles[i] = attractedParticle;
+        attractedParticleQueue[bfsPushIndex++] = attractedParticle;
+
+        if (!isPlayerAttractive)
+        {
+            activeAttractionPoints[*outActiveAttractionPointCount] = attractionPoint;
+            *outActiveAttractionPointCount += 1;
+        }
+    }
+
+    while (bfsPopIndex != bfsPushIndex)
+    {
+        Particle *sourceParticle = attractedParticleQueue[bfsPopIndex++];
+        int sourceParticleIndex = (sourceParticle - particles) / sizeof(Particle *);
+        for (int i = 0; i < 4; i++)
+        {
+            float attractionPointAngle = world->playerAngle + i * PI / 2;
+            float attractionPointDistance = (sourceParticle->radius * 3) * config->baseParticleRadius;
+            float attractionPointX = sourceParticle->x + attractionPointDistance * cosf(attractionPointAngle);
+            float attractionPointY = sourceParticle->y - attractionPointDistance * sinf(attractionPointAngle);
+            int attractionPointIndex = 2 + sourceParticleIndex * 4 + i;
+            ActiveAttractionPoint attractionPoint = {attractionPointIndex, attractionPointX, attractionPointY};
+            if (isPlayerAttractive)
+            {
+                activeAttractionPoints[*outActiveAttractionPointCount] = attractionPoint;
+                *outActiveAttractionPointCount += 1;
+            }
+
+            Particle *attractedParticle = attractedParticles[attractionPointIndex];
+            if (attractedParticle == NULL)
+            {
+                continue;
+            }
+
+            float deltaX = attractedParticle->x - attractionPointX;
+            float deltaY = attractedParticle->y - attractionPointY;
+            float distance = sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (distance >= attractedParticle->radius * config->attractionPointRadius)
+            {
+                continue;
+            }
+
+            newAttractedParticles[attractionPointIndex] = attractedParticle;
+            if (!isPlayerAttractive)
+            {
+                activeAttractionPoints[*outActiveAttractionPointCount] = attractionPoint;
+                *outActiveAttractionPointCount += 1;
+            }
+
+            int attractedParticleIndex = (attractedParticle - particles) / sizeof(Particle *);
+            if (bfsVisited[attractedParticleIndex])
+            {
+                continue;
+            }
+            bfsVisited[attractedParticleIndex] = true;
+            attractedParticleQueue[bfsPushIndex++] = attractedParticle;
+        }
+    }
+
+    memcpy(attractedParticles, newAttractedParticles, ATTRACTION_POINT_COUNT * sizeof(Particle *));
+}
+
+void applyAttractionPoints(
+    World *world, ActiveAttractionPoint *activeAttractionPoints, int activeAttractionPointCount,
+    bool isPlayerAttractive)
+{
+    Config *config = &world->config;
+    Particle *player = world->particles;
+    Particle **attractedParticles = world->attractedParticles;
+
+    Particle *particlesAroundPlayer[PARTICLE_COUNT];
+    int particleAroundPlayerCount = 0;
+
+    int cellIndices[9];
+    int cellCount = particleGridGetNeighborhoodIndices(&world->particleGrid, player, cellIndices);
+    for (int i = 0; i < cellCount; i++)
+    {
+        ParticleCell *particleCell = world->particleGrid.particleCells + cellIndices[i];
+        for (int j = 0; j < particleCell->count; j++)
+        {
+            Particle *particle = particleCell->particles[j];
+            if (particle == player)
+            {
+                continue;
+            }
+            particlesAroundPlayer[particleAroundPlayerCount++] = particle;
+        }
+    }
+
+    for (int i = 0; i < particleAroundPlayerCount; i++)
+    {
+        Particle *particle = particlesAroundPlayer[i];
+
+        float sumXf = 0;
+        float sumYf = 0;
+        int interactionCount = 0;
+        for (int j = 0; j < activeAttractionPointCount; j++)
+        {
+            ActiveAttractionPoint attractionPoint = activeAttractionPoints[j];
+            float deltaX = attractionPoint.x - particle->x;
+            float deltaY = attractionPoint.y - particle->y;
+            float distance = sqrtf(deltaX * deltaX + deltaY * deltaY);
+            float interactionRadius = config->baseParticleRadius;
+            if (distance >= interactionRadius)
+            {
+                continue;
+            }
+
+            if (isPlayerAttractive && attractedParticles[attractionPoint.index] == NULL)
+            {
+                attractedParticles[attractionPoint.index] = particle;
+            }
+
+            sumXf += deltaX / distance * config->attractionPointForce;
+            sumYf += deltaY / distance * config->attractionPointForce;
+            interactionCount++;
+        }
+
+        if (interactionCount > 0)
+        {
+            particle->xa[0] += sumXf / interactionCount / particle->mass;
+            particle->ya[0] += sumYf / interactionCount / particle->mass;
+        }
     }
 }
 
@@ -178,51 +374,19 @@ int compareInts(const void *a, const void *b)
     return *(int *)(a) - *(int *)(b);
 }
 
-void worldUpdate(World *world, bool isPlayerAttractive)
+void validateParticleGrid(ParticleGrid *particleGrid)
 {
-    Particle *particles = world->particles;
-    ParticleType *particleTypes = world->particleTypes;
-    Config *config = &world->config;
-    ParticleGrid *particleGrid = &world->particleGrid;    
-
-    for (int i = 0; i < PARTICLE_COUNT; i++)
-    {
-        Particle *particle = particles + i;
-        particle->xv *= (1.0 - config->friction);
-        particle->yv *= (1.0 - config->friction);
-
-        int oldCellIndex = particleGridFindCellIndex(particleGrid, particle);
-        if (oldCellIndex != particle->cellIndex)
-        {
-            abortWithMessage("Did particle move???");
-        }
-        particle->x += particle->xv;
-        particle->y += particle->yv;
-
-        ParticleType *particleType = particleTypes + particle->type;
-        updateParticleInteractions(world, particleType, i);
-        for (int j = 0; j < particleType->steps; j++)
-        {
-            particle->xa[j] = particle->xa[j + 1];
-            particle->ya[j] = particle->ya[j + 1];
-        }
-        particle->xv += particle->xa[0];
-        particle->yv += particle->ya[0];
-        updateWallCollisions(&particles[i], config);
-        particleGridUpdateCell(particleGrid, particle, i, oldCellIndex);
-    }
-
     int totalParticlesInCells = 0;
     int particlePositions[PARTICLE_COUNT];
-    for (int i = 0; i < world->particleGrid.rowCount * world->particleGrid.columnCount; i++)
+    for (int i = 0; i < particleGrid->rowCount * particleGrid->columnCount; i++)
     {
-        totalParticlesInCells += world->particleGrid.particleCells[i].count;
-        for (int j = 0; j < world->particleGrid.particleCells[i].count; j++)
+        totalParticlesInCells += particleGrid->particleCells[i].count;
+        for (int j = 0; j < particleGrid->particleCells[i].count; j++)
         {
-            particlePositions[j] = world->particleGrid.particleCells[i].particles[j]->posWithinCell;
+            particlePositions[j] = particleGrid->particleCells[i].particles[j]->posWithinCell;
         }
-        qsort(particlePositions, world->particleGrid.particleCells[i].count, sizeof(int), compareInts);
-        for (int j = 0; j < world->particleGrid.particleCells[i].count - 1; j++)
+        qsort(particlePositions, particleGrid->particleCells[i].count, sizeof(int), compareInts);
+        for (int j = 0; j < particleGrid->particleCells[i].count - 1; j++)
         {
             if (particlePositions[j + 1] - particlePositions[j] != 1)
             {
@@ -234,6 +398,49 @@ void worldUpdate(World *world, bool isPlayerAttractive)
     {
         abortWithMessage("Particle count inconsistent");
     }
+}
+
+void worldUpdate(World *world, bool isPlayerAttractive)
+{
+    Particle *particles = world->particles;
+    ParticleType *particleTypes = world->particleTypes;
+    Config *config = &world->config;
+    ParticleGrid *particleGrid = &world->particleGrid;
+
+    for (int i = 0; i < PARTICLE_COUNT; i++)
+    {
+        Particle *particle = particles + i;
+        particle->xv *= (1.0 - config->friction);
+        particle->yv *= (1.0 - config->friction);
+        particle->x += particle->xv;
+        particle->y += particle->yv;
+
+        ParticleType *particleType = particleTypes + particle->type;
+        updateParticleInteractions(world, particleType, i);
+        for (int j = 0; j < particleType->steps; j++)
+        {
+            particle->xa[j] = particle->xa[j + 1];
+            particle->ya[j] = particle->ya[j + 1];
+        }
+    }
+
+    ActiveAttractionPoint activeAttractionPoints[ATTRACTION_POINT_COUNT];
+    int activeAttractionPointCount = 0;
+    updateAttractedParticles(
+        world, activeAttractionPoints, &activeAttractionPointCount, isPlayerAttractive);
+    applyAttractionPoints(
+        world, activeAttractionPoints, activeAttractionPointCount, isPlayerAttractive);
+
+    for (int i = 0; i < PARTICLE_COUNT; i++)
+    {
+        Particle *particle = particles + i;
+        particle->xv += particle->xa[0];
+        particle->yv += particle->ya[0];
+        updateWallCollisions(particle, config);
+        particleGridUpdateCell(particleGrid, particle, i);
+    }
+
+    validateParticleGrid(particleGrid);
 }
 
 void worldRender(World *world)
@@ -254,7 +461,7 @@ void worldRender(World *world)
             particle->radius * world->config.baseParticleRadius * scaleFactor,
             world->particleTypes[particle->type].color);
     }
-    
+
     DrawLineEx(
         (Vector2){
             (world->particles[0].x + cos(world->playerAngle) * 10) * scaleFactor,

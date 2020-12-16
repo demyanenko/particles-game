@@ -136,13 +136,13 @@ int particleGridGetNeighborhoodIndices(ParticleGrid *particleGrid, Particle *par
 }
 
 void particleGridUpdateCell(
-    ParticleGrid *particleGrid, Particle *particle, int particleIndex, int oldCellIndex)
+    ParticleGrid *particleGrid, Particle *particle, int particleIndex)
 {
     ParticleCell *particleCells = particleGrid->particleCells;
     int newCellIndex = particleGridFindCellIndex(particleGrid, particle);
-    if (newCellIndex != oldCellIndex)
+    if (newCellIndex != particle->cellIndex)
     {
-        particleCellRemove(particleCells + oldCellIndex, particle);
+        particleCellRemove(particleCells + particle->cellIndex, particle);
         particleCellAdd(particleCells + newCellIndex, particle);
         particle->cellIndex = newCellIndex;
     }

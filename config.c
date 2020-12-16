@@ -4,14 +4,15 @@
 
 typedef struct
 {
-    float scaleFactor;
     float friction;
     float baseParticleRadius;
-    float repelRadius;
-    float baseRepelDistance;
-    float maxInteractionRadius;
+    float baseRepelRadius;
+    float repelFactor;
+    float attractionPointRadius;
+    float attractionPointForce;
     float playerThrottleAmount;
     float playerTurnAmount;
+    float scaleFactor;
     int width;
     int sidebarWidth;
     int height;
@@ -23,9 +24,10 @@ void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, 
 {
     config->friction = 0.2;
     config->baseParticleRadius = 2.7;
-    config->repelRadius = 1.6 * config->baseParticleRadius;
-    config->baseRepelDistance = 2 * config->repelRadius;
-    config->maxInteractionRadius = 30 * config->baseParticleRadius;
+    config->baseRepelRadius = 4;
+    config->repelFactor = 1;
+    config->attractionPointRadius = 1.5 * config->baseParticleRadius;
+    config->attractionPointForce = 1;
     config->playerThrottleAmount = 1;
     config->playerTurnAmount = 0.01 * PI;
     config->scaleFactor = scaleFactor;
