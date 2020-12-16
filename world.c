@@ -3,41 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include "config.c"
 #include "particle.c"
 #include "particleGrid.c"
 #include "particleTypes.c"
 
-typedef struct
-{
-    float scaleFactor;
-    float friction;
-    float baseParticleRadius;
-    float repelRadius;
-    float baseRepelDistance;
-    float maxInteractionRadius;
-    int width;
-    int sidebarWidth;
-    int height;
-    float backgroundTransparency;
-    Color backgroundColor;
-} Config;
-
-void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, int height)
-{
-    config->friction = 0.2;
-    config->baseParticleRadius = 2.7;
-    config->repelRadius = 1.6 * config->baseParticleRadius;
-    config->baseRepelDistance = 2 * config->repelRadius;
-    config->maxInteractionRadius = 30 * config->baseParticleRadius;
-    config->scaleFactor = scaleFactor;
-    config->width = width;
-    config->sidebarWidth = sidebarWidth;
-    config->height = height;
-    config->backgroundTransparency = 0.7;
-    config->backgroundColor = (Color){0, 0, 0, (1 - config->backgroundTransparency) * 255};
-}
-
-#define PARTICLE_COUNT 1000
+#define PARTICLE_COUNT 500
 
 typedef struct
 {
@@ -45,7 +16,7 @@ typedef struct
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
     ParticleGrid particleGrid;
-
+    float playerAngle;
 } World;
 
 #define MAX_PARTICLE_RADIUS 1
@@ -68,10 +39,12 @@ void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int
         }
     }
 
+    particleInit(world->particles, 0, width / 2, height / 2, 4);
+
     srand(time(0));
-    for (int i = 0; i < PARTICLE_COUNT; i++)
+    for (int i = 1; i < PARTICLE_COUNT; i++)
     {
-        int particleType = i * PARTICLE_TYPE_COUNT / PARTICLE_COUNT;
+        int particleType = 1;
         float x = (float)(rand()) / RAND_MAX * width;
         float y = (float)(rand()) / RAND_MAX * height;
         float size = 1 + powf((float)(rand()) / RAND_MAX, 5) * (MAX_PARTICLE_RADIUS - 1);
@@ -81,6 +54,16 @@ void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int
     particleGridInit(
         &world->particleGrid, width, height, ceilf(maxInteractionRadius), world->particles,
         PARTICLE_COUNT);
+
+    world->playerAngle = PI / 2;
+}
+
+void worldMovePlayer(World *world, int throttleDelta, int angleDelta)
+{
+    world->playerAngle = fmodf(world->playerAngle + angleDelta * world->config.playerTurnAmount, PI * 2);
+    float throttle = throttleDelta * world->config.playerThrottleAmount;
+    world->particles[0].xv = cosf(world->playerAngle) * throttle;
+    world->particles[0].yv = -sinf(world->playerAngle) * throttle;
 }
 
 void updateParticleInteractions(World *world, ParticleType *particleType, int particleIndex)
@@ -127,11 +110,11 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
                 particle->yv -= repelY * repelAmount;
             }
 
-            float interactionRadius = particleType->radius[otherParticle->type] * otherParticle->radius;
+            float interactionRadius = particleType->radius[otherParticle->type];
             if (distanceSquared < interactionRadius * interactionRadius)
             {
                 float distance = sqrtf(distanceSquared);
-                float interactionForce = particleType->force[otherParticle->type] * otherParticle->radius;
+                float interactionForce = particleType->force[otherParticle->type];
                 sumXf += deltaX / distance * interactionForce;
                 sumYf += deltaY / distance * interactionForce;
                 interactionCount++;
@@ -195,12 +178,12 @@ int compareInts(const void *a, const void *b)
     return *(int *)(a) - *(int *)(b);
 }
 
-void worldUpdate(World *world)
+void worldUpdate(World *world, bool isPlayerAttractive)
 {
     Particle *particles = world->particles;
     ParticleType *particleTypes = world->particleTypes;
     Config *config = &world->config;
-    ParticleGrid *particleGrid = &world->particleGrid;
+    ParticleGrid *particleGrid = &world->particleGrid;    
 
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
@@ -271,6 +254,16 @@ void worldRender(World *world)
             particle->radius * world->config.baseParticleRadius * scaleFactor,
             world->particleTypes[particle->type].color);
     }
+    
+    DrawLineEx(
+        (Vector2){
+            (world->particles[0].x + cos(world->playerAngle) * 10) * scaleFactor,
+            (world->particles[0].y - sin(world->playerAngle) * 10) * scaleFactor},
+        (Vector2){
+            (world->particles[0].x) * scaleFactor,
+            (world->particles[0].y) * scaleFactor},
+        2 * scaleFactor,
+        WHITE);
 
     int cellWidth = world->config.sidebarWidth / PARTICLE_TYPE_COUNT * 2;
     int cellHeight = world->config.sidebarWidth / PARTICLE_TYPE_COUNT / 2;
