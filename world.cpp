@@ -55,9 +55,9 @@ struct World
     double playerAngle;
 };
 
-void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int height)
+void worldInit(World *world, float scaleFactor, int width, int height)
 {
-    configInit(&world->config, scaleFactor, width, sidebarWidth, height);
+    configInit(&world->config, scaleFactor, width, height);
 
     initParticleTypes(world->particleTypes);
     double maxInteractionRadius = 0;

@@ -8,17 +8,16 @@
 
 int main() {
 	float scaleFactor = 8;
-	float worldWidth = 250;
-	float sidebarWidth = 0;
+	float width = 250;
 	float height = 250;
-	int windowWidth = (worldWidth + sidebarWidth) * scaleFactor;
+	int windowWidth = width * scaleFactor;
 	int windowHeight = height * scaleFactor;
 
 	int overlayFontSize = 30;
 	int overlayInset = 10;
 
 	World world;
-	worldInit(&world, scaleFactor, worldWidth, sidebarWidth, height);
+	worldInit(&world, scaleFactor, width, height);
 
 	InitWindow(windowWidth, windowHeight, "Window");
 	SetTargetFPS(60);

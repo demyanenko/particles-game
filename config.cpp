@@ -16,13 +16,12 @@ struct Config
     float playerTurnAmount;
     float scaleFactor;
     int width;
-    int sidebarWidth;
     int height;
     float backgroundTransparency;
     Color backgroundColor;
 };
 
-void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, int height)
+void configInit(Config *config, float scaleFactor, int width, int height)
 {
     config->physicsStepsPerFrame = 20;
     config->dt = 1.0 / 60 / config->physicsStepsPerFrame;
@@ -36,7 +35,6 @@ void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, 
     config->playerTurnAmount = 0.6 * PI;
     config->scaleFactor = scaleFactor;
     config->width = width;
-    config->sidebarWidth = sidebarWidth;
     config->height = height;
     config->backgroundTransparency = 0.1;
     unsigned char backgroundAlpha = (1 - config->backgroundTransparency) * 255;
