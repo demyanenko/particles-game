@@ -10,7 +10,7 @@
 #include "particleTypes.cpp"
 
 #define PARTICLE_COUNT 250
-#define SNAP_POINT_COUNT (PARTICLE_COUNT * 4)
+#define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
 
 enum class GrowthMode
 {
@@ -185,12 +185,25 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
         bfsVisited[i] = false;
     }
 
-    double playerSnapDistance = (player->radius + 2) * config->baseParticleRadius;
-    for (int i = 0; i < 4; i++)
+    double playerSnapDistance = (player->radius + 1) * config->baseParticleRadius;
+    int playerSnapDeltaHs[6] = {-1, -1, -1, 1, 1, 1};
+    int playerSnapDeltaVs[6] = {-2, 0, 2, 2, 0, -2};
+    double snapStep = 3 * config->baseParticleRadius;
+    for (int i = 0; i < 6; i++)
     {
-        double snapPointAngle = world->playerAngle + PI / 4 + i * PI / 2;
-        double snapPointX = player->x + playerSnapDistance * cos(snapPointAngle);
-        double snapPointY = player->y - playerSnapDistance * sin(snapPointAngle);
+        double snapPointX = player->x;
+        double snapPointY = player->y;
+        double hAngle = world->playerAngle - PI / 2;
+        double vAngle = world->playerAngle;
+        while (pow(snapPointX - player->x, 2) + pow(snapPointY - player->y, 2) <
+               pow(playerSnapDistance, 2))
+        {
+            snapPointX += playerSnapDeltaHs[i] * cos(hAngle) * snapStep;
+            snapPointY -= playerSnapDeltaHs[i] * sin(hAngle) * snapStep;
+            snapPointX += playerSnapDeltaVs[i] * cos(vAngle) * snapStep;
+            snapPointY -= playerSnapDeltaVs[i] * sin(vAngle) * snapStep;
+        }
+
         ActiveSnapPoint snapPoint = {i, snapPointX, snapPointY};
         if (growthMode == GrowthMode::Growing)
         {
@@ -228,9 +241,8 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
         for (int i = 0; i < 4; i++)
         {
             double snapPointAngle = world->playerAngle + i * PI / 2;
-            double snapPointDistance = (sourceParticle->radius * 3) * config->baseParticleRadius;
-            double snapPointX = sourceParticle->x + snapPointDistance * cos(snapPointAngle);
-            double snapPointY = sourceParticle->y - snapPointDistance * sin(snapPointAngle);
+            double snapPointX = sourceParticle->x + snapStep * cos(snapPointAngle);
+            double snapPointY = sourceParticle->y - snapStep * sin(snapPointAngle);
             double playerDeltaX = snapPointX - player->x;
             double playerDeltaY = snapPointY - player->y;
             double playerDistance = sqrt(playerDeltaX * playerDeltaX + playerDeltaY * playerDeltaY);
@@ -239,7 +251,7 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
                 continue;
             }
 
-            int snapPointIndex = sourceParticleIndex * 4 + i;
+            int snapPointIndex = 2 + sourceParticleIndex * 4 + i;
             ActiveSnapPoint snapPoint = {snapPointIndex, snapPointX, snapPointY};
             if (growthMode == GrowthMode::Growing)
             {
