@@ -12,12 +12,28 @@
 #define PARTICLE_COUNT 250
 #define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
 
+enum class GrowthMode
+{
+    Growing,
+    Maintaining,
+    Shedding
+};
+
+struct ActiveSnapPoint
+{
+    int index;
+    double x;
+    double y;
+};
+
 struct World
 {
     Config config;
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
     Particle *snappedParticles[SNAP_POINT_COUNT];
+    ActiveSnapPoint activeSnapPoints[SNAP_POINT_COUNT];
+    int activeSnapPointCount;
     ParticleGrid particleGrid;
     double playerAngle;
 };
@@ -55,6 +71,8 @@ void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int
     {
         world->snappedParticles[i] = NULL;
     }
+
+    world->activeSnapPointCount = 0;
 
     particleGridInit(
         &world->particleGrid, width, height, ceilf(maxInteractionRadius), world->particles,
@@ -131,26 +149,30 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
     }
 }
 
-struct ActiveSnapPoint
-{
-    int index;
-    double x;
-    double y;
-};
-
-void updateSnappedParticles(
-    World *world, ActiveSnapPoint *activeSnapPoints, int *outActiveSnapPointCount,
-    bool isPlayerAttractive)
+void updateSnappedParticles(World *world, GrowthMode growthMode)
 {
     Config *config = &world->config;
     Particle *particles = world->particles;
     Particle *player = particles;
     Particle **snappedParticles = world->snappedParticles;
+    ActiveSnapPoint *activeSnapPoints = world->activeSnapPoints;
 
+    world->activeSnapPointCount = 0;
     Particle *newSnappedParticles[SNAP_POINT_COUNT];
     for (int i = 0; i < SNAP_POINT_COUNT; i++)
     {
         newSnappedParticles[i] = NULL;
+    }
+    for (int i = 0; i < PARTICLE_COUNT; i++)
+    {
+        particles[i].isSnapped = false;
+    }
+    particles[0].isSnapped = true;
+
+    if (growthMode == GrowthMode::Shedding)
+    {
+        memcpy(snappedParticles, newSnappedParticles, SNAP_POINT_COUNT * sizeof(Particle *));
+        return;
     }
 
     Particle *snappedParticleQueue[PARTICLE_COUNT];
@@ -160,9 +182,7 @@ void updateSnappedParticles(
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
         bfsVisited[i] = false;
-        particles[i].isSnapped = false;
     }
-    particles[0].isSnapped = true;
 
     double playerSnapDistance = (player->radius + 2) * config->baseParticleRadius;
     for (int i = 0; i < 6; i++)
@@ -171,10 +191,9 @@ void updateSnappedParticles(
         double snapPointX = player->x + playerSnapDistance * cos(snapPointAngle);
         double snapPointY = player->y - playerSnapDistance * sin(snapPointAngle);
         ActiveSnapPoint snapPoint = {i, snapPointX, snapPointY};
-        if (isPlayerAttractive)
+        if (growthMode == GrowthMode::Growing)
         {
-            activeSnapPoints[*outActiveSnapPointCount] = snapPoint;
-            *outActiveSnapPointCount += 1;
+            activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
         }
 
         Particle *snappedParticle = snappedParticles[i];
@@ -194,10 +213,9 @@ void updateSnappedParticles(
         newSnappedParticles[i] = snappedParticle;
         snappedParticleQueue[bfsPushIndex++] = snappedParticle;
 
-        if (!isPlayerAttractive)
+        if (growthMode == GrowthMode::Maintaining)
         {
-            activeSnapPoints[*outActiveSnapPointCount] = snapPoint;
-            *outActiveSnapPointCount += 1;
+            activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
         }
     }
 
@@ -222,10 +240,9 @@ void updateSnappedParticles(
 
             int snapPointIndex = 2 + sourceParticleIndex * 4 + i;
             ActiveSnapPoint snapPoint = {snapPointIndex, snapPointX, snapPointY};
-            if (isPlayerAttractive)
+            if (growthMode == GrowthMode::Growing)
             {
-                activeSnapPoints[*outActiveSnapPointCount] = snapPoint;
-                *outActiveSnapPointCount += 1;
+                activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
             }
 
             Particle *attractedParticle = snappedParticles[snapPointIndex];
@@ -243,10 +260,9 @@ void updateSnappedParticles(
             }
 
             newSnappedParticles[snapPointIndex] = attractedParticle;
-            if (!isPlayerAttractive)
+            if (growthMode == GrowthMode::Maintaining)
             {
-                activeSnapPoints[*outActiveSnapPointCount] = snapPoint;
-                *outActiveSnapPointCount += 1;
+                activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
             }
 
             int snappedParticleIndex = (attractedParticle - particles) / sizeof(Particle *);
@@ -262,13 +278,12 @@ void updateSnappedParticles(
     memcpy(snappedParticles, newSnappedParticles, SNAP_POINT_COUNT * sizeof(Particle *));
 }
 
-void applySnapPoints(
-    World *world, ActiveSnapPoint *activeSnapPoints, int activeSnapPointCount,
-    bool isPlayerAttractive)
+void applySnapPoints(World *world, GrowthMode growthMode)
 {
     Config *config = &world->config;
     Particle *player = world->particles;
     Particle **snappedParticles = world->snappedParticles;
+    ActiveSnapPoint *activeSnapPoints = world->activeSnapPoints;
 
     Particle *particlesAroundPlayer[PARTICLE_COUNT];
     int particleAroundPlayerCount = 0;
@@ -296,7 +311,7 @@ void applySnapPoints(
         double sumXf = 0;
         double sumYf = 0;
         int interactionCount = 0;
-        for (int j = 0; j < activeSnapPointCount; j++)
+        for (int j = 0; j < world->activeSnapPointCount; j++)
         {
             ActiveSnapPoint snapPoint = activeSnapPoints[j];
             double deltaX = snapPoint.x - particle->x;
@@ -308,7 +323,7 @@ void applySnapPoints(
                 continue;
             }
 
-            if (isPlayerAttractive && snappedParticles[snapPoint.index] == NULL)
+            if (growthMode == GrowthMode::Growing && snappedParticles[snapPoint.index] == NULL)
             {
                 snappedParticles[snapPoint.index] = particle;
             }
@@ -395,7 +410,7 @@ void validateParticleGrid(ParticleGrid *particleGrid)
     }
 }
 
-void worldUpdate(World *world, int throttleDelta, int angleDelta, bool isPlayerAttractive)
+void worldUpdate(World *world, int throttleDelta, int angleDelta, GrowthMode growthMode)
 {
     Particle *particles = world->particles;
     ParticleType *particleTypes = world->particleTypes;
@@ -427,12 +442,8 @@ void worldUpdate(World *world, int throttleDelta, int angleDelta, bool isPlayerA
             }
         }
 
-        ActiveSnapPoint activeSnapPoints[SNAP_POINT_COUNT];
-        int activeSnapPointCount = 0;
-        updateSnappedParticles(
-            world, activeSnapPoints, &activeSnapPointCount, isPlayerAttractive);
-        applySnapPoints(
-            world, activeSnapPoints, activeSnapPointCount, isPlayerAttractive);
+        updateSnappedParticles(world, growthMode);
+        applySnapPoints(world, growthMode);
 
         for (int i = 0; i < PARTICLE_COUNT; i++)
         {
@@ -456,6 +467,17 @@ void worldRender(World *world)
         world->config.width * scaleFactor,
         world->config.height * scaleFactor,
         world->config.backgroundColor);
+
+    for (int i = 0; i < world->activeSnapPointCount; i++)
+    {
+        ActiveSnapPoint snapPoint = world->activeSnapPoints[i];
+        DrawCircle(
+            snapPoint.x * scaleFactor,
+            snapPoint.y * scaleFactor,
+            world->config.snapPointRadius * scaleFactor,
+            (Color){255, 255, 255, 63});
+    }
+
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
         Particle *particle = world->particles + i;

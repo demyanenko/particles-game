@@ -30,7 +30,7 @@ void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, 
     config->baseParticleRadius = 2.7;
     config->baseRepelRadius = 4;
     config->baseRepelFactor = 3600;
-    config->snapPointRadius = 2 * config->baseParticleRadius;
+    config->snapPointRadius = 1.5 * config->baseParticleRadius;
     config->snapPointForce = 100000;
     config->playerThrottleAmount = 1800;
     config->playerTurnAmount = 0.6 * PI;
