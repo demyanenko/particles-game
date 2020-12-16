@@ -1,14 +1,16 @@
 #include <stdio.h>
 #include "raylib.h"
 #include "world.cpp"
+#include "worldPhysics.cpp"
+#include "worldRender.cpp"
 
 #define NELEMS(x) (sizeof(x) / sizeof(x[0]))
 
 int main() {
-	float scaleFactor = 2;
-	float worldWidth = 600;
-	float sidebarWidth = 800;
-	float height = 800;
+	float scaleFactor = 7;
+	float worldWidth = 250;
+	float sidebarWidth = 0;
+	float height = 250;
 	int windowWidth = (worldWidth + sidebarWidth) * scaleFactor;
 	int windowHeight = height * scaleFactor;
 

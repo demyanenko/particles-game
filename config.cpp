@@ -7,7 +7,6 @@ struct Config
     int physicsStepsPerFrame;
     double dt;
     float friction;
-    float baseParticleRadius;
     float baseRepelRadius;
     float baseRepelFactor;
     float snapPointRadius;
@@ -27,10 +26,9 @@ void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, 
     config->physicsStepsPerFrame = 50;
     config->dt = 1.0 / 60 / config->physicsStepsPerFrame;
     config->friction = 30;
-    config->baseParticleRadius = 2.7;
-    config->baseRepelRadius = 4;
+    config->baseRepelRadius = 1.5;
     config->baseRepelFactor = 3600;
-    config->snapPointRadius = 1.5 * config->baseParticleRadius;
+    config->snapPointRadius = sqrt(2);
     config->snapPointForce = 100000;
     config->playerThrottleAmount = 1800;
     config->playerTurnAmount = 0.6 * PI;
@@ -38,7 +36,7 @@ void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, 
     config->width = width;
     config->sidebarWidth = sidebarWidth;
     config->height = height;
-    config->backgroundTransparency = 0.7;
+    config->backgroundTransparency = 0.1;
     unsigned char backgroundAlpha = (1 - config->backgroundTransparency) * 255;
     config->backgroundColor = (Color){0, 0, 0, backgroundAlpha};
 }
