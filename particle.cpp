@@ -7,18 +7,18 @@ struct Particle
     int type;
     float radius;
     float mass;
-    float x;
-    float y;
-    float xv;
-    float yv;
-    float xa[MAX_STEPS];
-    float ya[MAX_STEPS];
+    double x;
+    double y;
+    double xv;
+    double yv;
+    double xa[MAX_STEPS];
+    double ya[MAX_STEPS];
     int cellIndex;
     int posWithinCell;
     bool isSnapped;
 };
 
-void particleInit(Particle *particle, int type, float x, float y, float size)
+void particleInit(Particle *particle, int type, double x, double y, float size)
 {
     particle->type = type;
     particle->radius = size;

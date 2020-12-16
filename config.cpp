@@ -5,7 +5,7 @@
 struct Config
 {
     int physicsStepsPerFrame;
-    float dt;
+    double dt;
     float friction;
     float baseParticleRadius;
     float baseRepelRadius;
@@ -24,16 +24,16 @@ struct Config
 
 void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, int height)
 {
-    config->physicsStepsPerFrame = 10;
+    config->physicsStepsPerFrame = 50;
     config->dt = 1.0 / 60 / config->physicsStepsPerFrame;
     config->friction = 30;
     config->baseParticleRadius = 2.7;
     config->baseRepelRadius = 4;
     config->baseRepelFactor = 3600;
     config->snapPointRadius = 2 * config->baseParticleRadius;
-    config->snapPointForce = 25000;
-    config->playerThrottleAmount = 60;
-    config->playerTurnAmount = 0.01 * PI;
+    config->snapPointForce = 100000;
+    config->playerThrottleAmount = 1800;
+    config->playerTurnAmount = 0.6 * PI;
     config->scaleFactor = scaleFactor;
     config->width = width;
     config->sidebarWidth = sidebarWidth;
