@@ -4,23 +4,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "config.c"
-#include "particle.c"
-#include "particleGrid.c"
-#include "particleTypes.c"
+#include "config.cpp"
+#include "particle.cpp"
+#include "particleGrid.cpp"
+#include "particleTypes.cpp"
 
 #define PARTICLE_COUNT 500
-#define ATTRACTION_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
+#define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
 
-typedef struct
+struct World
 {
     Config config;
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
-    Particle *attractedParticles[ATTRACTION_POINT_COUNT];
+    Particle *snappedParticles[SNAP_POINT_COUNT];
     ParticleGrid particleGrid;
     float playerAngle;
-} World;
+};
 
 #define MAX_PARTICLE_RADIUS 1
 
@@ -54,9 +54,9 @@ void worldInit(World *world, float scaleFactor, int width, int sidebarWidth, int
         particleInit(world->particles + i, particleType, x, y, size);
     }
 
-    for (int i = 0; i < ATTRACTION_POINT_COUNT; i++)
+    for (int i = 0; i < SNAP_POINT_COUNT; i++)
     {
-        world->attractedParticles[i] = NULL;
+        world->snappedParticles[i] = NULL;
     }
 
     particleGridInit(
@@ -112,9 +112,10 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
                 float distance = sqrtf(distanceSquared);
                 float repelX = deltaX / distance;
                 float repelY = deltaY / distance;
-                float repelAmount = config->repelFactor * (1.0 - distance / repelDistance);
-                particle->xv -= repelX * repelAmount;
-                particle->yv -= repelY * repelAmount;
+                float repelAmount =
+                    config->baseRepelFactor * particleType->repelFactor * (1.0 - distance / repelDistance);
+                particle->xv -= repelX * repelAmount * config->dt;
+                particle->yv -= repelY * repelAmount * config->dt;
             }
 
             float interactionRadius = particleType->radius[otherParticle->type];
@@ -142,29 +143,29 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
     }
 }
 
-typedef struct
+struct ActiveSnapPoint
 {
     int index;
     float x;
     float y;
-} ActiveAttractionPoint;
+};
 
-void updateAttractedParticles(
-    World *world, ActiveAttractionPoint *activeAttractionPoints, int *outActiveAttractionPointCount,
+void updateSnappedParticles(
+    World *world, ActiveSnapPoint *activeSnapPoints, int *outActiveSnapPointCount,
     bool isPlayerAttractive)
 {
     Config *config = &world->config;
     Particle *particles = world->particles;
     Particle *player = particles;
-    Particle **attractedParticles = world->attractedParticles;
+    Particle **snappedParticles = world->snappedParticles;
 
-    Particle *newAttractedParticles[ATTRACTION_POINT_COUNT];
-    for (int i = 0; i < ATTRACTION_POINT_COUNT; i++)
+    Particle *newSnappedParticles[SNAP_POINT_COUNT];
+    for (int i = 0; i < SNAP_POINT_COUNT; i++)
     {
-        newAttractedParticles[i] = NULL;
+        newSnappedParticles[i] = NULL;
     }
 
-    Particle *attractedParticleQueue[PARTICLE_COUNT];
+    Particle *snappedParticleQueue[PARTICLE_COUNT];
     int bfsPopIndex = 0;
     int bfsPushIndex = 0;
     bool bfsVisited[PARTICLE_COUNT];
@@ -173,107 +174,110 @@ void updateAttractedParticles(
         bfsVisited[i] = false;
     }
 
-    if (isPlayerAttractive)
-    {
-        int a = 0;
-    }
-
+    float playerSnapDistance = (player->radius + 2) * config->baseParticleRadius;
     for (int i = 0; i < 6; i++)
     {
-        float attractionPointAngle = world->playerAngle + PI / 6 + i * PI / 3;
-        float attractionPointDistance = (player->radius + 2) * config->baseParticleRadius;
-        float attractionPointX = player->x + attractionPointDistance * cosf(attractionPointAngle);
-        float attractionPointY = player->y - attractionPointDistance * sinf(attractionPointAngle);
-        ActiveAttractionPoint attractionPoint = {i, attractionPointX, attractionPointY};
+        float snapPointAngle = world->playerAngle + PI / 6 + i * PI / 3;
+        float snapPointX = player->x + playerSnapDistance * cosf(snapPointAngle);
+        float snapPointY = player->y - playerSnapDistance * sinf(snapPointAngle);
+        ActiveSnapPoint snapPoint = {i, snapPointX, snapPointY};
         if (isPlayerAttractive)
         {
-            activeAttractionPoints[*outActiveAttractionPointCount] = attractionPoint;
-            *outActiveAttractionPointCount += 1;
+            activeSnapPoints[*outActiveSnapPointCount] = snapPoint;
+            *outActiveSnapPointCount += 1;
         }
 
-        Particle *attractedParticle = attractedParticles[i];
-        if (attractedParticle == NULL)
+        Particle *snappedParticle = snappedParticles[i];
+        if (snappedParticle == NULL)
         {
             continue;
         }
 
-        float deltaX = attractedParticle->x - attractionPointX;
-        float deltaY = attractedParticle->y - attractionPointY;
+        float deltaX = snappedParticle->x - snapPointX;
+        float deltaY = snappedParticle->y - snapPointY;
         float distance = sqrt(deltaX * deltaX + deltaY * deltaY);
-        if (distance >= attractedParticle->radius * config->attractionPointRadius)
+        if (distance >= snappedParticle->radius * config->snapPointRadius)
         {
             continue;
         }
 
-        newAttractedParticles[i] = attractedParticle;
-        attractedParticleQueue[bfsPushIndex++] = attractedParticle;
+        newSnappedParticles[i] = snappedParticle;
+        snappedParticleQueue[bfsPushIndex++] = snappedParticle;
 
         if (!isPlayerAttractive)
         {
-            activeAttractionPoints[*outActiveAttractionPointCount] = attractionPoint;
-            *outActiveAttractionPointCount += 1;
+            activeSnapPoints[*outActiveSnapPointCount] = snapPoint;
+            *outActiveSnapPointCount += 1;
         }
     }
 
     while (bfsPopIndex != bfsPushIndex)
     {
-        Particle *sourceParticle = attractedParticleQueue[bfsPopIndex++];
+        Particle *sourceParticle = snappedParticleQueue[bfsPopIndex++];
         int sourceParticleIndex = (sourceParticle - particles) / sizeof(Particle *);
         for (int i = 0; i < 4; i++)
         {
-            float attractionPointAngle = world->playerAngle + i * PI / 2;
-            float attractionPointDistance = (sourceParticle->radius * 3) * config->baseParticleRadius;
-            float attractionPointX = sourceParticle->x + attractionPointDistance * cosf(attractionPointAngle);
-            float attractionPointY = sourceParticle->y - attractionPointDistance * sinf(attractionPointAngle);
-            int attractionPointIndex = 2 + sourceParticleIndex * 4 + i;
-            ActiveAttractionPoint attractionPoint = {attractionPointIndex, attractionPointX, attractionPointY};
-            if (isPlayerAttractive)
+            float snapPointAngle = world->playerAngle + i * PI / 2;
+            float snapPointDistance = (sourceParticle->radius * 3) * config->baseParticleRadius;
+            float snapPointX = sourceParticle->x + snapPointDistance * cosf(snapPointAngle);
+            float snapPointY = sourceParticle->y - snapPointDistance * sinf(snapPointAngle);
+            float playerDeltaX = snapPointX - player->x;
+            float playerDeltaY = snapPointY - player->y;
+            float playerDistance = sqrtf(playerDeltaX * playerDeltaX + playerDeltaY * playerDeltaY);
+            if (playerDistance < playerSnapDistance)
             {
-                activeAttractionPoints[*outActiveAttractionPointCount] = attractionPoint;
-                *outActiveAttractionPointCount += 1;
+                continue;
             }
 
-            Particle *attractedParticle = attractedParticles[attractionPointIndex];
+            int snapPointIndex = 2 + sourceParticleIndex * 4 + i;
+            ActiveSnapPoint snapPoint = {snapPointIndex, snapPointX, snapPointY};
+            if (isPlayerAttractive)
+            {
+                activeSnapPoints[*outActiveSnapPointCount] = snapPoint;
+                *outActiveSnapPointCount += 1;
+            }
+
+            Particle *attractedParticle = snappedParticles[snapPointIndex];
             if (attractedParticle == NULL)
             {
                 continue;
             }
 
-            float deltaX = attractedParticle->x - attractionPointX;
-            float deltaY = attractedParticle->y - attractionPointY;
+            float deltaX = attractedParticle->x - snapPointX;
+            float deltaY = attractedParticle->y - snapPointY;
             float distance = sqrt(deltaX * deltaX + deltaY * deltaY);
-            if (distance >= attractedParticle->radius * config->attractionPointRadius)
+            if (distance >= attractedParticle->radius * config->snapPointRadius)
             {
                 continue;
             }
 
-            newAttractedParticles[attractionPointIndex] = attractedParticle;
+            newSnappedParticles[snapPointIndex] = attractedParticle;
             if (!isPlayerAttractive)
             {
-                activeAttractionPoints[*outActiveAttractionPointCount] = attractionPoint;
-                *outActiveAttractionPointCount += 1;
+                activeSnapPoints[*outActiveSnapPointCount] = snapPoint;
+                *outActiveSnapPointCount += 1;
             }
 
-            int attractedParticleIndex = (attractedParticle - particles) / sizeof(Particle *);
-            if (bfsVisited[attractedParticleIndex])
+            int snappedParticleIndex = (attractedParticle - particles) / sizeof(Particle *);
+            if (bfsVisited[snappedParticleIndex])
             {
                 continue;
             }
-            bfsVisited[attractedParticleIndex] = true;
-            attractedParticleQueue[bfsPushIndex++] = attractedParticle;
+            bfsVisited[snappedParticleIndex] = true;
+            snappedParticleQueue[bfsPushIndex++] = attractedParticle;
         }
     }
 
-    memcpy(attractedParticles, newAttractedParticles, ATTRACTION_POINT_COUNT * sizeof(Particle *));
+    memcpy(snappedParticles, newSnappedParticles, SNAP_POINT_COUNT * sizeof(Particle *));
 }
 
-void applyAttractionPoints(
-    World *world, ActiveAttractionPoint *activeAttractionPoints, int activeAttractionPointCount,
+void applySnapPoints(
+    World *world, ActiveSnapPoint *activeSnapPoints, int activeSnapPointCount,
     bool isPlayerAttractive)
 {
     Config *config = &world->config;
     Particle *player = world->particles;
-    Particle **attractedParticles = world->attractedParticles;
+    Particle **snappedParticles = world->snappedParticles;
 
     Particle *particlesAroundPlayer[PARTICLE_COUNT];
     int particleAroundPlayerCount = 0;
@@ -301,11 +305,11 @@ void applyAttractionPoints(
         float sumXf = 0;
         float sumYf = 0;
         int interactionCount = 0;
-        for (int j = 0; j < activeAttractionPointCount; j++)
+        for (int j = 0; j < activeSnapPointCount; j++)
         {
-            ActiveAttractionPoint attractionPoint = activeAttractionPoints[j];
-            float deltaX = attractionPoint.x - particle->x;
-            float deltaY = attractionPoint.y - particle->y;
+            ActiveSnapPoint snapPoint = activeSnapPoints[j];
+            float deltaX = snapPoint.x - particle->x;
+            float deltaY = snapPoint.y - particle->y;
             float distance = sqrtf(deltaX * deltaX + deltaY * deltaY);
             float interactionRadius = config->baseParticleRadius;
             if (distance >= interactionRadius)
@@ -313,13 +317,13 @@ void applyAttractionPoints(
                 continue;
             }
 
-            if (isPlayerAttractive && attractedParticles[attractionPoint.index] == NULL)
+            if (isPlayerAttractive && snappedParticles[snapPoint.index] == NULL)
             {
-                attractedParticles[attractionPoint.index] = particle;
+                snappedParticles[snapPoint.index] = particle;
             }
 
-            sumXf += deltaX / distance * config->attractionPointForce;
-            sumYf += deltaY / distance * config->attractionPointForce;
+            sumXf += deltaX / distance * config->snapPointForce;
+            sumYf += deltaY / distance * config->snapPointForce;
             interactionCount++;
         }
 
@@ -407,40 +411,43 @@ void worldUpdate(World *world, bool isPlayerAttractive)
     Config *config = &world->config;
     ParticleGrid *particleGrid = &world->particleGrid;
 
-    for (int i = 0; i < PARTICLE_COUNT; i++)
+    for (int t = 0; t < config->physicsStepsPerFrame; t++)
     {
-        Particle *particle = particles + i;
-        particle->xv *= (1.0 - config->friction);
-        particle->yv *= (1.0 - config->friction);
-        particle->x += particle->xv;
-        particle->y += particle->yv;
-
-        ParticleType *particleType = particleTypes + particle->type;
-        updateParticleInteractions(world, particleType, i);
-        for (int j = 0; j < particleType->steps; j++)
+        for (int i = 0; i < PARTICLE_COUNT; i++)
         {
-            particle->xa[j] = particle->xa[j + 1];
-            particle->ya[j] = particle->ya[j + 1];
+            Particle *particle = particles + i;
+            particle->xv *= (1.0 - config->friction * config->dt);
+            particle->yv *= (1.0 - config->friction * config->dt);
+            particle->x += particle->xv * config->dt;
+            particle->y += particle->yv * config->dt;
+
+            ParticleType *particleType = particleTypes + particle->type;
+            updateParticleInteractions(world, particleType, i);
+            for (int j = 0; j < particleType->steps; j++)
+            {
+                particle->xa[j] = particle->xa[j + 1];
+                particle->ya[j] = particle->ya[j + 1];
+            }
         }
+
+        ActiveSnapPoint activeSnapPoints[SNAP_POINT_COUNT];
+        int activeSnapPointCount = 0;
+        updateSnappedParticles(
+            world, activeSnapPoints, &activeSnapPointCount, isPlayerAttractive);
+        applySnapPoints(
+            world, activeSnapPoints, activeSnapPointCount, isPlayerAttractive);
+
+        for (int i = 0; i < PARTICLE_COUNT; i++)
+        {
+            Particle *particle = particles + i;
+            particle->xv += particle->xa[0] * config->dt;
+            particle->yv += particle->ya[0] * config->dt;
+            updateWallCollisions(particle, config);
+            particleGridUpdateCell(particleGrid, particle, i);
+        }
+
+        validateParticleGrid(particleGrid);
     }
-
-    ActiveAttractionPoint activeAttractionPoints[ATTRACTION_POINT_COUNT];
-    int activeAttractionPointCount = 0;
-    updateAttractedParticles(
-        world, activeAttractionPoints, &activeAttractionPointCount, isPlayerAttractive);
-    applyAttractionPoints(
-        world, activeAttractionPoints, activeAttractionPointCount, isPlayerAttractive);
-
-    for (int i = 0; i < PARTICLE_COUNT; i++)
-    {
-        Particle *particle = particles + i;
-        particle->xv += particle->xa[0];
-        particle->yv += particle->ya[0];
-        updateWallCollisions(particle, config);
-        particleGridUpdateCell(particleGrid, particle, i);
-    }
-
-    validateParticleGrid(particleGrid);
 }
 
 void worldRender(World *world)
@@ -469,7 +476,7 @@ void worldRender(World *world)
         (Vector2){
             (world->particles[0].x) * scaleFactor,
             (world->particles[0].y) * scaleFactor},
-        2 * scaleFactor,
+        scaleFactor,
         WHITE);
 
     int cellWidth = world->config.sidebarWidth / PARTICLE_TYPE_COUNT * 2;
@@ -486,7 +493,7 @@ void worldRender(World *world)
         {
             int cellY = (i % 2 * PARTICLE_TYPE_COUNT + j) * cellHeight;
             float interactionRadius = world->particleTypes[i].radius[j];
-            float force = world->particleTypes[i].force[j] * 10;
+            float force = world->particleTypes[i].force[j];
             DrawCircle(
                 (cellX + cellWidth / 2) * scaleFactor,
                 (cellY + cellHeight / 2) * scaleFactor,
@@ -508,8 +515,8 @@ void worldRender(World *world)
                 GRAY);
             DrawLineEx(
                 (Vector2){
-                    (cellX + cellWidth / 2 + force * 0.9) * scaleFactor,
-                    (cellY + cellHeight / 2 - force * 0.05) * scaleFactor},
+                    (cellX + cellWidth / 2 + force * 0.9f) * scaleFactor,
+                    (cellY + cellHeight / 2 - force * 0.05f) * scaleFactor},
                 (Vector2){
                     (cellX + cellWidth / 2 + force) * scaleFactor,
                     (cellY + cellHeight / 2) * scaleFactor},
@@ -517,8 +524,8 @@ void worldRender(World *world)
                 GRAY);
             DrawLineEx(
                 (Vector2){
-                    (cellX + cellWidth / 2 + force * 0.9) * scaleFactor,
-                    (cellY + cellHeight / 2 + force * 0.05) * scaleFactor},
+                    (cellX + cellWidth / 2 + force * 0.9f) * scaleFactor,
+                    (cellY + cellHeight / 2 + force * 0.05f) * scaleFactor},
                 (Vector2){
                     (cellX + cellWidth / 2 + force) * scaleFactor,
                     (cellY + cellHeight / 2) * scaleFactor},
@@ -526,7 +533,7 @@ void worldRender(World *world)
                 GRAY);
             DrawText(
                 stepsStr,
-                (cellX + cellWidth / 2 + force * 0.5 - stepsFontSize / 2) * scaleFactor,
+                (cellX + cellWidth / 2 + force * 0.5f - stepsFontSize / 2) * scaleFactor,
                 (cellY + cellHeight / 2 - stepsFontSize - stepsOffset) * scaleFactor,
                 stepsFontSize * scaleFactor,
                 GRAY);

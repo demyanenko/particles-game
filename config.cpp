@@ -2,14 +2,16 @@
 
 #include "raylib.h"
 
-typedef struct
+struct Config
 {
+    int physicsStepsPerFrame;
+    float dt;
     float friction;
     float baseParticleRadius;
     float baseRepelRadius;
-    float repelFactor;
-    float attractionPointRadius;
-    float attractionPointForce;
+    float baseRepelFactor;
+    float snapPointRadius;
+    float snapPointForce;
     float playerThrottleAmount;
     float playerTurnAmount;
     float scaleFactor;
@@ -18,22 +20,25 @@ typedef struct
     int height;
     float backgroundTransparency;
     Color backgroundColor;
-} Config;
+};
 
 void configInit(Config *config, float scaleFactor, int width, int sidebarWidth, int height)
 {
-    config->friction = 0.2;
+    config->physicsStepsPerFrame = 10;
+    config->dt = 1.0 / 60 / config->physicsStepsPerFrame;
+    config->friction = 30;
     config->baseParticleRadius = 2.7;
     config->baseRepelRadius = 4;
-    config->repelFactor = 1;
-    config->attractionPointRadius = 1.5 * config->baseParticleRadius;
-    config->attractionPointForce = 1;
-    config->playerThrottleAmount = 1;
+    config->baseRepelFactor = 3600;
+    config->snapPointRadius = 2 * config->baseParticleRadius;
+    config->snapPointForce = 25000;
+    config->playerThrottleAmount = 60;
     config->playerTurnAmount = 0.01 * PI;
     config->scaleFactor = scaleFactor;
     config->width = width;
     config->sidebarWidth = sidebarWidth;
     config->height = height;
     config->backgroundTransparency = 0.7;
-    config->backgroundColor = (Color){0, 0, 0, (1 - config->backgroundTransparency) * 255};
+    unsigned char backgroundAlpha = (1 - config->backgroundTransparency) * 255;
+    config->backgroundColor = (Color){0, 0, 0, backgroundAlpha};
 }

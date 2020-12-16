@@ -2,19 +2,19 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include "particle.c"
-#include "util.c"
+#include "particle.cpp"
+#include "util.cpp"
 
-typedef struct
+struct ParticleCell
 {
     Particle **particles;
     int count;
     int capacity;
-} ParticleCell;
+};
 
 void particleCellInit(ParticleCell *particleCell, int capacity)
 {
-    particleCell->particles = malloc(sizeof(Particle *) * capacity);
+    particleCell->particles = (Particle **)malloc(sizeof(Particle *) * capacity);
     particleCell->count = 0;
     particleCell->capacity = capacity;
 }
@@ -45,19 +45,19 @@ void particleCellRemove(ParticleCell *particleCell, Particle *particle)
     particleCell->particles[posWithinCell]->posWithinCell = posWithinCell;
 }
 
-typedef struct
+struct ParticleCellCoord
 {
     int column;
     int row;
-} ParticleCellCoord;
+};
 
-typedef struct
+struct ParticleGrid
 {
     int columnCount;
     int rowCount;
     int cellSize;
     ParticleCell *particleCells;
-} ParticleGrid;
+};
 
 ParticleCellCoord particleGridGetCellCoord(ParticleGrid *particleGrid, Particle *particle)
 {
@@ -87,7 +87,7 @@ void particleGridInit(
     particleGrid->rowCount = ceilf((float)(height) / cellSize);
     particleGrid->cellSize = cellSize;
     int cellCount = particleGrid->columnCount * particleGrid->rowCount;
-    particleGrid->particleCells = malloc(sizeof(ParticleCell) * cellCount);
+    particleGrid->particleCells = (ParticleCell *)malloc(sizeof(ParticleCell) * cellCount);
     for (int i = 0; i < cellCount; i++)
     {
         particleCellInit(particleGrid->particleCells + i, particleCount);
@@ -113,14 +113,14 @@ int particleGridGetNeighborhoodIndices(ParticleGrid *particleGrid, Particle *par
     {
         int xOffset = xOffsets[i];
         bool isXWithinBounds = (xOffset == -1 && centerCellCoord.column > 0) ||
-            xOffset == 0 ||
-            (xOffset == 1 && centerCellCoord.column < particleGrid->columnCount - 1);
-        
+                               xOffset == 0 ||
+                               (xOffset == 1 && centerCellCoord.column < particleGrid->columnCount - 1);
+
         int yOffset = yOffsets[i];
         bool isYWithinBounds = (yOffset == -1 && centerCellCoord.row > 0) ||
-            yOffset == 0 ||
-            (yOffset == 1 && centerCellCoord.row < particleGrid->rowCount - 1);
-        
+                               yOffset == 0 ||
+                               (yOffset == 1 && centerCellCoord.row < particleGrid->rowCount - 1);
+
         if (!isXWithinBounds || !isYWithinBounds)
         {
             continue;

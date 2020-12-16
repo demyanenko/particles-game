@@ -2,7 +2,7 @@
 
 #define MAX_STEPS 4
 
-typedef struct
+struct Particle
 {
     int type;
     float radius;
@@ -15,7 +15,7 @@ typedef struct
     float ya[MAX_STEPS];
     int cellIndex;
     int posWithinCell;
-} Particle;
+};
 
 void particleInit(Particle *particle, int type, float x, float y, float size)
 {

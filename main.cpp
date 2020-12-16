@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "raylib.h"
-#include "world.c"
+#include "world.cpp"
 
 #define NELEMS(x) (sizeof(x) / sizeof(x[0]))
 

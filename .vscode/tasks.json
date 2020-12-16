@@ -8,9 +8,9 @@
             "args": [
                 "-o",
                 "main.exe",
-                "main.c",
+                "main.cpp",
                 "C:\\raylib-gcc\\raylib\\src\\raylib.rc.data",
-                "-std=c99",
+                "-std=c++14",
                 "-g",
                 "-Wall",
                 "-lmsvcrt",
@@ -39,9 +39,9 @@
             "args": [
                 "-o",
                 "main.exe",
-                "main.c",
+                "main.cpp",
                 "C:\\raylib-gcc\\raylib\\src\\raylib.rc.data",
-                "-std=c99",
+                "-std=c++14",
                 "-O3",
                 "-Wall",
                 "-lmsvcrt",
