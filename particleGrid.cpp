@@ -73,6 +73,13 @@ int particleGridCellCoordToIndex(ParticleGrid *particleGrid, ParticleCellCoord c
     return cellCoord.row * particleGrid->columnCount + cellCoord.column;
 }
 
+ParticleCellCoord particleGridCellIndexToCoord(ParticleGrid *particleGrid, int particleCellIndex)
+{
+    return (ParticleCellCoord){
+        particleCellIndex % particleGrid->columnCount,
+        particleCellIndex / particleGrid->columnCount};
+}
+
 int particleGridFindCellIndex(ParticleGrid *particleGrid, Particle *particle)
 {
     ParticleCellCoord cellCoord = particleGridGetCellCoord(particleGrid, particle);
@@ -101,35 +108,32 @@ void particleGridInit(
     }
 }
 
-// max 9 indices
+#define MAX_NEIGHBOR_CELLS 25
+
 int particleGridGetNeighborhoodIndices(ParticleGrid *particleGrid, Particle *particle, int *outIndices)
 {
-    int xOffsets[9] = {0, -1, 0, 1, 1, 1, 0, -1, -1};
-    int yOffsets[9] = {0, -1, -1, -1, 0, 1, 1, 1, 0};
-
     int cellCount = 0;
     ParticleCellCoord centerCellCoord = particleGridGetCellCoord(particleGrid, particle);
-    for (int i = 0; i < 9; i++)
+    for (int xOffset = -2; xOffset <= 2; xOffset++)
     {
-        int xOffset = xOffsets[i];
-        bool isXWithinBounds = (xOffset == -1 && centerCellCoord.column > 0) ||
-                               xOffset == 0 ||
-                               (xOffset == 1 && centerCellCoord.column < particleGrid->columnCount - 1);
-
-        int yOffset = yOffsets[i];
-        bool isYWithinBounds = (yOffset == -1 && centerCellCoord.row > 0) ||
-                               yOffset == 0 ||
-                               (yOffset == 1 && centerCellCoord.row < particleGrid->rowCount - 1);
-
-        if (!isXWithinBounds || !isYWithinBounds)
+        for (int yOffset = -2; yOffset <= 2; yOffset++)
         {
-            continue;
-        }
+            bool isXWithinBounds = centerCellCoord.column + xOffset >= 0 &&
+                                   centerCellCoord.column + xOffset < particleGrid->columnCount;
 
-        ParticleCellCoord cellCoord = (ParticleCellCoord){
-            centerCellCoord.column + xOffset,
-            centerCellCoord.row + yOffset};
-        outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, cellCoord);
+            bool isYWithinBounds = centerCellCoord.row + yOffset >= 0 &&
+                                   centerCellCoord.row + yOffset < particleGrid->rowCount;
+
+            if (!isXWithinBounds || !isYWithinBounds)
+            {
+                continue;
+            }
+
+            ParticleCellCoord cellCoord = (ParticleCellCoord){
+                centerCellCoord.column + xOffset,
+                centerCellCoord.row + yOffset};
+            outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, cellCoord);
+        }
     }
 
     return cellCount;

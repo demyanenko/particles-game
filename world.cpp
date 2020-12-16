@@ -10,7 +10,7 @@
 #include "particleTypes.cpp"
 
 #define PARTICLE_COUNT 250
-#define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
+#define SNAP_POINT_COUNT (PARTICLE_COUNT * 4)
 
 enum class GrowthMode
 {
@@ -91,7 +91,7 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
     double sumYf = 0;
     int interactionCount = 0;
 
-    int cellIndices[9];
+    int cellIndices[MAX_NEIGHBOR_CELLS];
     int cellCount = particleGridGetNeighborhoodIndices(&world->particleGrid, particle, cellIndices);
     for (int i = 0; i < cellCount; i++)
     {
@@ -125,7 +125,8 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
             }
 
             double interactionRadius = particleType->radius[otherParticle->type];
-            if (distanceSquared < interactionRadius * interactionRadius)
+            if (!(particle->isSnapped && otherParticle->isSnapped) &&
+                distanceSquared < interactionRadius * interactionRadius)
             {
                 double distance = sqrt(distanceSquared);
                 double interactionForce = particleType->force[otherParticle->type];
@@ -185,9 +186,9 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
     }
 
     double playerSnapDistance = (player->radius + 2) * config->baseParticleRadius;
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < 4; i++)
     {
-        double snapPointAngle = world->playerAngle + PI / 6 + i * PI / 3;
+        double snapPointAngle = world->playerAngle + PI / 4 + i * PI / 2;
         double snapPointX = player->x + playerSnapDistance * cos(snapPointAngle);
         double snapPointY = player->y - playerSnapDistance * sin(snapPointAngle);
         ActiveSnapPoint snapPoint = {i, snapPointX, snapPointY};
@@ -238,7 +239,7 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
                 continue;
             }
 
-            int snapPointIndex = 2 + sourceParticleIndex * 4 + i;
+            int snapPointIndex = sourceParticleIndex * 4 + i;
             ActiveSnapPoint snapPoint = {snapPointIndex, snapPointX, snapPointY};
             if (growthMode == GrowthMode::Growing)
             {
@@ -288,7 +289,7 @@ void applySnapPoints(World *world, GrowthMode growthMode)
     Particle *particlesAroundPlayer[PARTICLE_COUNT];
     int particleAroundPlayerCount = 0;
 
-    int cellIndices[9];
+    int cellIndices[MAX_NEIGHBOR_CELLS];
     int cellCount = particleGridGetNeighborhoodIndices(&world->particleGrid, player, cellIndices);
     for (int i = 0; i < cellCount; i++)
     {
@@ -468,6 +469,23 @@ void worldRender(World *world)
         world->config.height * scaleFactor,
         world->config.backgroundColor);
 
+    int cellIndices[MAX_NEIGHBOR_CELLS];
+    int cellCount = particleGridGetNeighborhoodIndices(
+        &world->particleGrid, world->particles, cellIndices);
+    for (int i = 0; i < cellCount; i++)
+    {
+        ParticleCellCoord cellCoord =
+            particleGridCellIndexToCoord(&world->particleGrid, cellIndices[i]);
+        DrawRectangleLinesEx(
+            (Rectangle){
+                cellCoord.column * world->particleGrid.cellSize * scaleFactor,
+                cellCoord.row * world->particleGrid.cellSize * scaleFactor,
+                world->particleGrid.cellSize * scaleFactor,
+                world->particleGrid.cellSize * scaleFactor},
+            scaleFactor,
+            (Color){255, 255, 255, 7});
+    }
+
     for (int i = 0; i < world->activeSnapPointCount; i++)
     {
         ActiveSnapPoint snapPoint = world->activeSnapPoints[i];
@@ -475,7 +493,7 @@ void worldRender(World *world)
             snapPoint.x * scaleFactor,
             snapPoint.y * scaleFactor,
             world->config.snapPointRadius * scaleFactor,
-            (Color){255, 255, 255, 63});
+            (Color){255, 255, 255, 31});
     }
 
     for (int i = 0; i < PARTICLE_COUNT; i++)
