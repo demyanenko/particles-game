@@ -30,7 +30,7 @@ void configInit(Config *config, float scaleFactor, int width, int height)
     config->baseRepelFactor = 3600;
     config->snapPointRadius = sqrt(2);
     config->snapPointForce = 10000;
-    config->maxSnapDepth = 5;
+    config->maxSnapDepth = 20;
     config->playerThrottleAmount = 1800;
     config->playerTurnAmount = 0.6 * PI;
     config->scaleFactor = scaleFactor;

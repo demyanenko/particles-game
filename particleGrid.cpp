@@ -108,19 +108,19 @@ void particleGridInit(
     }
 }
 
-#define MAX_NEIGHBOR_CELLS 9
-// #define MAX_NEIGHBOR_CELLS 25
+// #define MAX_NEIGHBOR_CELLS 9
+#define MAX_NEIGHBOR_CELLS 25
 
 int particleGridGetNeighborhoodIndices(ParticleGrid *particleGrid, Particle *particle, int *outIndices)
 {
     int cellCount = 0;
     ParticleCellCoord centerCellCoord = particleGridGetCellCoord(particleGrid, particle);
-    // for (int xOffset = -2; xOffset <= 2; xOffset++)
-    // {
-    //     for (int yOffset = -2; yOffset <= 2; yOffset++)
-    for (int xOffset = -1; xOffset <= 1; xOffset++)
+    for (int xOffset = -2; xOffset <= 2; xOffset++)
     {
-        for (int yOffset = -1; yOffset <= 1; yOffset++)
+        for (int yOffset = -2; yOffset <= 2; yOffset++)
+    // for (int xOffset = -1; xOffset <= 1; xOffset++)
+    // {
+    //     for (int yOffset = -1; yOffset <= 1; yOffset++)
         {
             bool isXWithinBounds = centerCellCoord.column + xOffset >= 0 &&
                                    centerCellCoord.column + xOffset < particleGrid->columnCount;
