@@ -7,7 +7,6 @@ struct ParticleType
 {
     float force[PARTICLE_TYPE_COUNT];
     float radius[PARTICLE_TYPE_COUNT];
-    float repelFactor;
     float steps;
     Color color;
 };
@@ -21,7 +20,6 @@ void initParticleTypes(ParticleType *particleTypes)
     particleTypes[0].force[1] = 0;
     particleTypes[0].radius[1] = 1;
 
-    particleTypes[0].repelFactor = 0;
     particleTypes[0].steps = 0;
 
     particleTypes[1].force[0] = 1800;
@@ -30,6 +28,5 @@ void initParticleTypes(ParticleType *particleTypes)
     particleTypes[1].force[1] = 36;
     particleTypes[1].radius[1] = 32;
 
-    particleTypes[1].repelFactor = 1;
     particleTypes[1].steps = 0;
 }

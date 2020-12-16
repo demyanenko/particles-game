@@ -107,13 +107,12 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
             }
 
             float repelDistance = config->baseRepelRadius * (particle->radius + otherParticle->radius);
-            if (distanceSquared < repelDistance * repelDistance)
+            if (!particle->isSnapped && distanceSquared < repelDistance * repelDistance)
             {
                 float distance = sqrtf(distanceSquared);
                 float repelX = deltaX / distance;
                 float repelY = deltaY / distance;
-                float repelAmount =
-                    config->baseRepelFactor * particleType->repelFactor * (1.0 - distance / repelDistance);
+                float repelAmount = config->baseRepelFactor * (1.0 - distance / repelDistance);
                 particle->xv -= repelX * repelAmount * config->dt;
                 particle->yv -= repelY * repelAmount * config->dt;
             }
@@ -172,7 +171,9 @@ void updateSnappedParticles(
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
         bfsVisited[i] = false;
+        particles[i].isSnapped = false;
     }
+    particles[0].isSnapped = true;
 
     float playerSnapDistance = (player->radius + 2) * config->baseParticleRadius;
     for (int i = 0; i < 6; i++)
@@ -214,6 +215,7 @@ void updateSnappedParticles(
     while (bfsPopIndex != bfsPushIndex)
     {
         Particle *sourceParticle = snappedParticleQueue[bfsPopIndex++];
+        sourceParticle->isSnapped = true;
         int sourceParticleIndex = (sourceParticle - particles) / sizeof(Particle *);
         for (int i = 0; i < 4; i++)
         {

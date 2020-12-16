@@ -15,6 +15,7 @@ struct Particle
     float ya[MAX_STEPS];
     int cellIndex;
     int posWithinCell;
+    bool isSnapped;
 };
 
 void particleInit(Particle *particle, int type, float x, float y, float size)
@@ -33,4 +34,5 @@ void particleInit(Particle *particle, int type, float x, float y, float size)
     }
     particle->cellIndex = -1;
     particle->posWithinCell = -1;
+    particle->isSnapped = false;
 }
