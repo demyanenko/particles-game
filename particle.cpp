@@ -16,6 +16,7 @@ struct Particle
     int cellIndex;
     int posWithinCell;
     bool isSnapped;
+    bool isEdge;
 };
 
 void particleInit(Particle *particle, int type, double x, double y, float size)

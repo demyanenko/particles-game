@@ -5,10 +5,10 @@
 #include <string.h>
 #include <time.h>
 #include "config.cpp"
-#include "hashMap.cpp"
 #include "particle.cpp"
 #include "particleGrid.cpp"
 #include "particleTypes.cpp"
+#include <unordered_map>
 
 #define PARTICLE_COUNT 250
 #define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
@@ -48,12 +48,32 @@ struct World
     Config config;
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
-    HashMap<int, Particle *> snappedParticles;
+    std::unordered_map<int, Particle*> snappedParticles;
     SnapPoint activeSnapPoints[SNAP_POINT_COUNT];
     int activeSnapPointCount;
     ParticleGrid particleGrid;
     double playerAngle;
+    double playerLastShot;
 };
+
+Particle* popClosestSnappedParticle(World *world, double x, double y) {
+    double closest_distance_sq = 10000000;
+    auto closest_iter = world->snappedParticles.end();
+    for(auto it = world->snappedParticles.begin(); it != world->snappedParticles.end(); it++) {
+        Particle* testParticle = it->second;
+        double test_distance = pow((testParticle->x-x), 2) + pow((testParticle->y-y), 2);
+        if (test_distance < closest_distance_sq && testParticle->isEdge) {
+            closest_distance_sq = test_distance;
+            closest_iter = it;
+        }
+    }
+    Particle* out = nullptr;
+    if (closest_iter != world->snappedParticles.end()) {
+        out = closest_iter->second;
+        world->snappedParticles.erase(closest_iter);
+    }
+    return out;
+}
 
 void worldInit(World *world, float scaleFactor, int width, int height)
 {
@@ -83,8 +103,6 @@ void worldInit(World *world, float scaleFactor, int width, int height)
         double y = double(rand()) / RAND_MAX * height;
         particleInit(world->particles + i, particleType, x, y, 1);
     }
-
-    hashMapInit(&world->snappedParticles);
 
     world->activeSnapPointCount = 0;
 

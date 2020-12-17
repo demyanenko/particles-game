@@ -7,7 +7,7 @@
 #define NELEMS(x) (sizeof(x) / sizeof(x[0]))
 
 int main() {
-	float scaleFactor = 8;
+	float scaleFactor = 3;
 	float width = 250;
 	float height = 250;
 	int windowWidth = width * scaleFactor;
@@ -32,10 +32,15 @@ int main() {
 			: IsKeyDown(KEY_C)
 				? GrowthMode::Shedding
 				: GrowthMode::Maintaining;
+		int playerShooting = IsMouseButtonDown(0);
+		
 		float updateStartTime = GetTime();
-		worldUpdate(&world, playerThrottle, playerAngleDelta, growthMode);
+		double mouseX = (double)GetMouseX() / scaleFactor;
+		double mouseY = (double)GetMouseY() / scaleFactor;
+		worldUpdate(&world, playerThrottle, playerAngleDelta, growthMode, playerShooting, mouseX, mouseY);
 		float updateEndTime = GetTime();
 		float updateTimeMs = (updateEndTime - updateStartTime) * 1000;
+
 
 		// Draw
 		BeginDrawing();
