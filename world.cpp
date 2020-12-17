@@ -8,7 +8,6 @@
 #include "particle.cpp"
 #include "particleGrid.cpp"
 #include "particleTypes.cpp"
-#include <unordered_map>
 
 #define PARTICLE_COUNT 250
 #define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
@@ -48,9 +47,7 @@ struct World
     Config config;
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
-    std::unordered_map<int, Particle *> snappedParticles1;
-    std::unordered_map<int, Particle *> snappedParticles2;
-    std::unordered_map<int, Particle *> *currentSnappedParticles;
+    Particle *snappedParticles[MAX_SNAP_KEY];
     SnapPoint activeSnapPoints[SNAP_POINT_COUNT];
     int activeSnapPointCount;
     ParticleGrid particleGrid;
@@ -89,7 +86,7 @@ void worldInit(World *world, float scaleFactor, int width, int height)
         particleInit(world->particles + i, particleType, x, y, 1);
     }
 
-    world->currentSnappedParticles = &world->snappedParticles1;
+    memset(world->snappedParticles, 0, MAX_SNAP_KEY * sizeof(Particle *));
     world->activeSnapPointCount = 0;
 
     particleGridInit(
