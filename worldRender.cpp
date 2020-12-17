@@ -20,13 +20,12 @@ void worldRender(World *world)
         ParticleCellCoord cellCoord =
             particleGridCellIndexToCoord(&world->particleGrid, cellIndices[i]);
         DrawRectangleLinesEx(
-            (Rectangle){
-                cellCoord.column * world->particleGrid.cellSize * scaleFactor,
-                cellCoord.row * world->particleGrid.cellSize * scaleFactor,
-                world->particleGrid.cellSize * scaleFactor,
-                world->particleGrid.cellSize * scaleFactor},
+            Rectangle({cellCoord.column * world->particleGrid.cellSize * scaleFactor,
+                       cellCoord.row * world->particleGrid.cellSize * scaleFactor,
+                       world->particleGrid.cellSize * scaleFactor,
+                       world->particleGrid.cellSize * scaleFactor}),
             scaleFactor,
-            (Color){255, 255, 255, 7});
+            Color({255, 255, 255, 7}));
     }
 
     for (int i = 0; i < world->activeSnapPointCount; i++)
@@ -37,17 +36,24 @@ void worldRender(World *world)
             snapPointPos.x * scaleFactor,
             snapPointPos.y * scaleFactor,
             world->config.snapPointRadius * scaleFactor,
-            (Color){255, 255, 255, 31});
+            Color({255, 255, 255, 31}));
     }
 
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
         Particle *particle = world->particles + i;
+        Color particleTypeColor = world->particleTypes[particle->type].color;
+        Color particleColor = particle->isEdge
+                                  ? Color({(unsigned char)((particleTypeColor.r + 255) / 2),
+                                           (unsigned char)(particleTypeColor.g / 2),
+                                           (unsigned char)(particleTypeColor.b / 2),
+                                           particleTypeColor.a})
+                                  : particleTypeColor;
         DrawCircle(
             particle->x * scaleFactor,
             particle->y * scaleFactor,
             particle->radius * scaleFactor,
-            world->particleTypes[particle->type].color);
+            particleColor);
         if (particle->isSnapped)
         {
             DrawCircle(
@@ -59,12 +65,10 @@ void worldRender(World *world)
     }
 
     DrawLineEx(
-        (Vector2){
-            float(world->particles[0].x + cos(world->playerAngle) * world->particles[0].radius) * scaleFactor,
-            float(world->particles[0].y - sin(world->playerAngle) * world->particles[0].radius) * scaleFactor},
-        (Vector2){
-            float(world->particles[0].x) * scaleFactor,
-            float(world->particles[0].y) * scaleFactor},
+        Vector2({float(world->particles[0].x + cos(world->playerAngle) * world->particles[0].radius) * scaleFactor,
+                 float(world->particles[0].y - sin(world->playerAngle) * world->particles[0].radius) * scaleFactor}),
+        Vector2({float(world->particles[0].x) * scaleFactor,
+                 float(world->particles[0].y) * scaleFactor}),
         0.5 * scaleFactor,
         WHITE);
 }

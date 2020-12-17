@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include "raylib.h"
 #include "world.cpp"
-#include "worldPhysics.cpp"
 #include "worldRender.cpp"
+#include "worldUpdate.cpp"
 
 #define NELEMS(x) (sizeof(x) / sizeof(x[0]))
 
 int main() {
-	float scaleFactor = 3;
+	float scaleFactor = 8;
 	float width = 250;
 	float height = 250;
 	int windowWidth = width * scaleFactor;
@@ -32,12 +32,12 @@ int main() {
 			: IsKeyDown(KEY_C)
 				? GrowthMode::Shedding
 				: GrowthMode::Maintaining;
-		int playerShooting = IsMouseButtonDown(0);
+		int isPlayerShooting = IsMouseButtonDown(0);
 		
 		float updateStartTime = GetTime();
 		double mouseX = (double)GetMouseX() / scaleFactor;
 		double mouseY = (double)GetMouseY() / scaleFactor;
-		worldUpdate(&world, playerThrottle, playerAngleDelta, growthMode, playerShooting, mouseX, mouseY);
+		worldUpdate(&world, playerThrottle, playerAngleDelta, growthMode, isPlayerShooting, mouseX, mouseY);
 		float updateEndTime = GetTime();
 		float updateTimeMs = (updateEndTime - updateStartTime) * 1000;
 

@@ -76,8 +76,18 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
     Config *config = &world->config;
     Particle *particles = world->particles;
     Particle *player = particles;
-    std::unordered_map<int, Particle *> *snappedParticles = &world->snappedParticles;
+    std::unordered_map<int, Particle *> *snappedParticles = world->currentSnappedParticles;
+    std::unordered_map<int, Particle *> *newSnappedParticles =
+        world->currentSnappedParticles == &world->snappedParticles1
+            ? &world->snappedParticles2
+            : &world->snappedParticles1;
+    std::unordered_set<int> *bfsVisited = &world->bfsVisited;
+    std::unordered_set<int> *growingSnapPointsVisited = &world->growingSnapPointsVisited;
     SnapPoint *activeSnapPoints = world->activeSnapPoints;
+    
+    newSnappedParticles->clear();
+    bfsVisited->clear();
+    growingSnapPointsVisited->clear();
 
     world->activeSnapPointCount = 0;
     for (int i = 0; i < PARTICLE_COUNT; i++)
@@ -88,19 +98,15 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
     particles[0].isSnapped = true;
 
     {
-        std::unordered_map<int, Particle *> newSnappedParticles;
-
         if (growthMode == GrowthMode::Shedding)
         {
-            *snappedParticles = newSnappedParticles;
+            world->currentSnappedParticles = newSnappedParticles;
             return;
         }
 
         SnapPoint snapPointQueue[SNAP_POINT_COUNT];
         int bfsPopIndex = 0;
         int bfsPushIndex = 0;
-        std::unordered_map<int, bool> bfsVisited;
-        std::unordered_map<int, bool> growingSnapPointsVisited;
         SnapPoint playerSnapPoints[6] = {
             snapPointCreate(-1, -2),
             snapPointCreate(1, -2),
@@ -115,7 +121,7 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
             int snapPointKey = snapPointGetKey(snapPoint);
             if (growthMode == GrowthMode::Growing)
             {
-                growingSnapPointsVisited.insert({snapPointKey, true});
+                growingSnapPointsVisited->insert(snapPointKey);
                 activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
             }
 
@@ -128,14 +134,15 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
             Particle *snappedParticle = (*snappedParticles)[snapPointKey];
             double deltaX = snappedParticle->x - snapPointPos.x;
             double deltaY = snappedParticle->y - snapPointPos.y;
-            double distance = sqrt(deltaX * deltaX + deltaY * deltaY);
-            if (distance >= snappedParticle->radius * config->snapPointRadius)
+            double distanceSquared = deltaX * deltaX + deltaY * deltaY;
+            double snapRadius = snappedParticle->radius * config->snapPointRadius;
+            if (distanceSquared >= snapRadius * snapRadius)
             {
                 continue;
             }
 
-            newSnappedParticles.insert({snapPointKey, snappedParticle});
-            bfsVisited.insert({snapPointKey, true});
+            newSnappedParticles->insert({snapPointKey, snappedParticle});
+            bfsVisited->insert(snapPointKey);
             snapPointQueue[bfsPushIndex++] = snapPoint;
 
             if (growthMode == GrowthMode::Maintaining)
@@ -165,23 +172,26 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
             {
                 SnapPoint snapPoint = snapPoints[i];
                 SnapPointPos snapPointPos = snapPointGetPos(snapPoint, world);
-                if (pow(snapPointPos.x - player->x, 2) + pow(snapPointPos.y - player->y, 2) <
-                    pow(playerSnapDistance, 2))
+                double snapPointDeltaX = snapPointPos.x - player->x;
+                double snapPointDeltaY = snapPointPos.y - player->y;
+                double snapPointDistanceSquared =
+                    snapPointDeltaX * snapPointDeltaX + snapPointDeltaY * snapPointDeltaY;
+                if (snapPointDistanceSquared < playerSnapDistance * playerSnapDistance)
                 {
                     continue;
                 }
 
                 int snapPointKey = snapPointGetKey(snapPoint);
-                if (bfsVisited.count(snapPointKey) == 1)
+                if (bfsVisited->count(snapPointKey) == 1)
                 {
                     continue;
                 }
 
                 if (growthMode == GrowthMode::Growing &&
                     currBfsDepth + 1 <= config->maxSnapDepth &&
-                    growingSnapPointsVisited.count(snapPointKey) == 0)
+                    growingSnapPointsVisited->count(snapPointKey) == 0)
                 {
-                    growingSnapPointsVisited.insert({snapPointKey, true});
+                    growingSnapPointsVisited->insert(snapPointKey);
                     activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
                 }
 
@@ -193,25 +203,27 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
                 Particle *snappedParticle = (*snappedParticles)[snapPointKey];
                 double deltaX = snappedParticle->x - snapPointPos.x;
                 double deltaY = snappedParticle->y - snapPointPos.y;
-                double distance = sqrt(deltaX * deltaX + deltaY * deltaY);
-                if (distance >= snappedParticle->radius * config->snapPointRadius)
+                double distanceSquared = deltaX * deltaX + deltaY * deltaY;
+                double snapRadius = snappedParticle->radius * config->snapPointRadius;
+                if (distanceSquared >= snapRadius * snapRadius)
                 {
                     continue;
                 }
 
-                newSnappedParticles.insert({snapPointKey, snappedParticle});
+                newSnappedParticles->insert({snapPointKey, snappedParticle});
                 if (growthMode == GrowthMode::Maintaining &&
                     currBfsDepth + 1 <= config->maxSnapDepth)
                 {
                     activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
                 }
 
-                bfsVisited.insert({snapPointKey, true});
+                bfsVisited->insert(snapPointKey);
                 snapPointQueue[bfsPushIndex++] = snapPoint;
                 queueContributions++;
             }
-            
-            if (queueContributions == 0) {
+
+            if (queueContributions == 0)
+            {
                 sourceParticle->isEdge = true;
             }
 
@@ -223,7 +235,7 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
             }
         }
 
-        *snappedParticles = newSnappedParticles;
+        world->currentSnappedParticles = newSnappedParticles;
     }
 }
 
@@ -231,7 +243,8 @@ void applySnapPoints(World *world, GrowthMode growthMode)
 {
     Config *config = &world->config;
     Particle *player = world->particles;
-    std::unordered_map<int, Particle *> *snappedParticles = &world->snappedParticles;
+    ParticleType *particleTypes = world->particleTypes;
+    std::unordered_map<int, Particle *> *snappedParticles = world->currentSnappedParticles;
     SnapPoint *activeSnapPoints = world->activeSnapPoints;
 
     Particle *particlesAroundPlayer[PARTICLE_COUNT];
@@ -259,22 +272,27 @@ void applySnapPoints(World *world, GrowthMode growthMode)
         SnapPointPos snapPointPos = snapPointGetPos(snapPoint, world);
 
         Particle *closestParticle = NULL;
-        double minDistance = config->snapPointRadius;
+        double minDistanceSquared = config->snapPointRadius * config->snapPointRadius;
         for (int j = 0; j < particleAroundPlayerCount; j++)
         {
             Particle *particle = particlesAroundPlayer[j];
-            double deltaX = snapPointPos.x - particle->x;
-            double deltaY = snapPointPos.y - particle->y;
-            double distance = sqrt(deltaX * deltaX + deltaY * deltaY);
-            if (distance >= config->snapPointRadius)
+            if (!particleTypes[particle->type].isSnappable)
             {
                 continue;
             }
 
-            if (distance < minDistance)
+            double deltaX = snapPointPos.x - particle->x;
+            double deltaY = snapPointPos.y - particle->y;
+            double distanceSquared = deltaX * deltaX + deltaY * deltaY;
+            if (distanceSquared >= config->snapPointRadius * config->snapPointRadius)
+            {
+                continue;
+            }
+
+            if (distanceSquared < minDistanceSquared)
             {
                 closestParticle = particle;
-                minDistance = distance;
+                minDistanceSquared = distanceSquared;
             }
         }
 
@@ -292,6 +310,7 @@ void applySnapPoints(World *world, GrowthMode growthMode)
 
         double deltaX = snapPointPos.x - closestParticle->x;
         double deltaY = snapPointPos.y - closestParticle->y;
+        double minDistance = sqrt(minDistanceSquared);
         closestParticle->xa[0] += deltaX / minDistance * config->snapPointForce / closestParticle->mass;
         closestParticle->ya[0] += deltaY / minDistance * config->snapPointForce / closestParticle->mass;
     }
@@ -366,7 +385,7 @@ void validateParticleGrid(ParticleGrid *particleGrid)
     }
 }
 
-void worldUpdate(World *world, int throttleDelta, int angleDelta, GrowthMode growthMode, bool playerShooting, double mouseX, double mouseY)
+void worldUpdate(World *world, int throttleDelta, int angleDelta, GrowthMode growthMode, bool isPlayerShooting, double mouseX, double mouseY)
 {
     Particle *particles = world->particles;
     ParticleType *particleTypes = world->particleTypes;
@@ -413,14 +432,20 @@ void worldUpdate(World *world, int throttleDelta, int angleDelta, GrowthMode gro
         validateParticleGrid(particleGrid);
     }
 
-    if (playerShooting) {
-        Particle* particleToShoot = popClosestSnappedParticle(world, mouseX, mouseY);
-        if (particleToShoot != NULL) {
+    double now = GetTime();
+    if (isPlayerShooting && now > world->playerLastShot + config->playerReloadTime)
+    {
+        Particle *particleToShoot = popClosestSnappedParticle(world, mouseX, mouseY);
+        if (particleToShoot != NULL)
+        {
             particleToShoot->type = 2;
-            auto distance = sqrt(pow(mouseX - particleToShoot->x,2) + pow(mouseY - particleToShoot->y,2));
-            particleToShoot->xv = (mouseX - particleToShoot->x)/distance * 1000;
-            particleToShoot->yv = (mouseY - particleToShoot->y)/distance * 1000;
+            double deltaX = mouseX - particleToShoot->x;
+            double deltaY = mouseY - particleToShoot->y;
+            double distance = sqrt(deltaX * deltaX + deltaY * deltaY);
+            particleToShoot->xv = (mouseX - particleToShoot->x) / distance * 1000;
+            particleToShoot->yv = (mouseY - particleToShoot->y) / distance * 1000;
             particleToShoot->isSnapped = false;
+            world->playerLastShot = now;
         }
     }
 }

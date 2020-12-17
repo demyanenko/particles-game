@@ -65,7 +65,7 @@ ParticleCellCoord particleGridGetCellCoord(ParticleGrid *particleGrid, Particle 
     int row = (int)(particle->y / particleGrid->cellSize);
     int clampedColumn = max(0, min(particleGrid->columnCount - 1, column));
     int clampedRow = max(0, min(particleGrid->rowCount - 1, row));
-    return (ParticleCellCoord){clampedColumn, clampedRow};
+    return ParticleCellCoord({clampedColumn, clampedRow});
 }
 
 int particleGridCellCoordToIndex(ParticleGrid *particleGrid, ParticleCellCoord cellCoord)
@@ -75,9 +75,8 @@ int particleGridCellCoordToIndex(ParticleGrid *particleGrid, ParticleCellCoord c
 
 ParticleCellCoord particleGridCellIndexToCoord(ParticleGrid *particleGrid, int particleCellIndex)
 {
-    return (ParticleCellCoord){
-        particleCellIndex % particleGrid->columnCount,
-        particleCellIndex / particleGrid->columnCount};
+    return ParticleCellCoord({particleCellIndex % particleGrid->columnCount,
+                              particleCellIndex / particleGrid->columnCount});
 }
 
 int particleGridFindCellIndex(ParticleGrid *particleGrid, Particle *particle)
@@ -118,9 +117,9 @@ int particleGridGetNeighborhoodIndices(ParticleGrid *particleGrid, Particle *par
     for (int xOffset = -2; xOffset <= 2; xOffset++)
     {
         for (int yOffset = -2; yOffset <= 2; yOffset++)
-    // for (int xOffset = -1; xOffset <= 1; xOffset++)
-    // {
-    //     for (int yOffset = -1; yOffset <= 1; yOffset++)
+        // for (int xOffset = -1; xOffset <= 1; xOffset++)
+        // {
+        //     for (int yOffset = -1; yOffset <= 1; yOffset++)
         {
             bool isXWithinBounds = centerCellCoord.column + xOffset >= 0 &&
                                    centerCellCoord.column + xOffset < particleGrid->columnCount;
@@ -133,9 +132,8 @@ int particleGridGetNeighborhoodIndices(ParticleGrid *particleGrid, Particle *par
                 continue;
             }
 
-            ParticleCellCoord cellCoord = (ParticleCellCoord){
-                centerCellCoord.column + xOffset,
-                centerCellCoord.row + yOffset};
+            ParticleCellCoord cellCoord = ParticleCellCoord({centerCellCoord.column + xOffset,
+                                                             centerCellCoord.row + yOffset});
             outIndices[cellCount++] = particleGridCellCoordToIndex(particleGrid, cellCoord);
         }
     }

@@ -21,7 +21,8 @@
                 "-lkernel32",
                 "-lshell32",
                 "-luser32",
-                "-fno-exceptions"
+                "-static",
+                "-lstdc++"
             ],
             "group": {
                 "kind": "build",
@@ -53,7 +54,8 @@
                 "-lkernel32",
                 "-lshell32",
                 "-luser32",
-                "-fno-exceptions"
+                "-static",
+                "-lstdc++"
             ],
             "group": "build",
             "options": {
@@ -61,6 +63,28 @@
                     "PATH": "C:\\raylib-gcc\\mingw\\bin"
                 }
             }
+        },
+        {
+            "label": "build MSVC release",
+            "type": "process",
+            "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat",
+            "args": [
+                "&",
+                "cl.exe",
+                "/Femain.exe",
+                "main.cpp",
+                "C:\\raylib-msvc\\lib\\raylib.lib",
+                "/std:c++14",
+                "/O2",
+                "/Zi",
+                "/W1",
+                "/IC:\\raylib-msvc\\include",
+                "/EHsc"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "group": "build"
         }
     ]
 }

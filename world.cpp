@@ -9,6 +9,7 @@
 #include "particleGrid.cpp"
 #include "particleTypes.cpp"
 #include <unordered_map>
+#include <unordered_set>
 
 #define PARTICLE_COUNT 250
 #define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
@@ -35,7 +36,7 @@ struct SnapPoint
 
 SnapPoint snapPointCreate(int u, int v)
 {
-    return (SnapPoint){u, v};
+    return SnapPoint({u, v});
 }
 
 int snapPointGetKey(SnapPoint snapPoint)
@@ -48,7 +49,11 @@ struct World
     Config config;
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
-    std::unordered_map<int, Particle*> snappedParticles;
+    std::unordered_map<int, Particle *> snappedParticles1;
+    std::unordered_map<int, Particle *> snappedParticles2;
+    std::unordered_map<int, Particle *> *currentSnappedParticles;
+    std::unordered_set<int> bfsVisited;
+    std::unordered_set<int> growingSnapPointsVisited;
     SnapPoint activeSnapPoints[SNAP_POINT_COUNT];
     int activeSnapPointCount;
     ParticleGrid particleGrid;
@@ -56,21 +61,26 @@ struct World
     double playerLastShot;
 };
 
-Particle* popClosestSnappedParticle(World *world, double x, double y) {
-    double closest_distance_sq = 10000000;
-    auto closest_iter = world->snappedParticles.end();
-    for(auto it = world->snappedParticles.begin(); it != world->snappedParticles.end(); it++) {
-        Particle* testParticle = it->second;
-        double test_distance = pow((testParticle->x-x), 2) + pow((testParticle->y-y), 2);
-        if (test_distance < closest_distance_sq && testParticle->isEdge) {
-            closest_distance_sq = test_distance;
-            closest_iter = it;
+Particle *popClosestSnappedParticle(World *world, double x, double y)
+{
+    std::unordered_map<int, Particle *> *snappedParticles = world->currentSnappedParticles;
+    double closestDistanceSq = 10000000;
+    auto closestIter = snappedParticles->end();
+    for (auto it = snappedParticles->begin(); it != snappedParticles->end(); it++)
+    {
+        Particle *testParticle = it->second;
+        double testDistance = pow((testParticle->x - x), 2) + pow((testParticle->y - y), 2);
+        if (testDistance < closestDistanceSq && testParticle->isEdge)
+        {
+            closestDistanceSq = testDistance;
+            closestIter = it;
         }
     }
-    Particle* out = nullptr;
-    if (closest_iter != world->snappedParticles.end()) {
-        out = closest_iter->second;
-        world->snappedParticles.erase(closest_iter);
+    Particle *out = nullptr;
+    if (closestIter != snappedParticles->end())
+    {
+        out = closestIter->second;
+        snappedParticles->erase(closestIter);
     }
     return out;
 }
@@ -104,6 +114,7 @@ void worldInit(World *world, float scaleFactor, int width, int height)
         particleInit(world->particles + i, particleType, x, y, 1);
     }
 
+    world->currentSnappedParticles = &world->snappedParticles1;
     world->activeSnapPointCount = 0;
 
     particleGridInit(
@@ -111,6 +122,7 @@ void worldInit(World *world, float scaleFactor, int width, int height)
         PARTICLE_COUNT);
 
     world->playerAngle = PI / 2;
+    world->playerLastShot = 0;
 }
 
 struct SnapPointPos

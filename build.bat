@@ -1,0 +1,1 @@
+cl.exe main.cpp C:\raylib-msvc\lib\raylib.lib /Femain-cl.exe /std:c++14 /Zi /W1 /IC:\raylib-msvc\include /EHsc
