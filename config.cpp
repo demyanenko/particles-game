@@ -25,12 +25,12 @@ struct Config
 
 void configInit(Config *config, float scaleFactor, int width, int height)
 {
-    config->physicsStepsPerFrame = 20;
+    config->physicsStepsPerFrame = 12;
     config->dt = 1.0 / 60 / config->physicsStepsPerFrame;
     config->baseRepelRadius = 1.5;
     config->baseRepelFactor = 3600;
     config->snapPointRadius = sqrt(2);
-    config->snapPointForce = 10000;
+    config->snapPointForce = 5000;
     config->maxSnapDepth = MAX_SNAP_DEPTH;
     config->playerThrottleAmount = 1800;
     config->playerTurnAmount = 0.6 * PI;
