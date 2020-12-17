@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "perfOverlay.cpp"
+#include "perfSidebar.cpp"
 #include "raylib.h"
 #include "world.cpp"
 #include "worldRender.cpp"
@@ -10,16 +10,19 @@ int main()
 	float scaleFactor = 8;
 	int width = 250;
 	int height = 250;
-	int windowWidth = width * scaleFactor;
+	int rawWidth = width * scaleFactor;
+	int sidebarRawWidth = 300;
+	int windowWidth = rawWidth + sidebarRawWidth;
 	int windowHeight = height * scaleFactor;
 
 	int overlayFontSize = 30;
 	int overlayInset = 10;
+	int sidebarInset = 50;
 
 	World world;
 	worldInit(&world, scaleFactor, width, height);
 
-	PerfOverlay perfOverlay;
+	PerfSidebar perfSidebar;
 
 	InitWindow(windowWidth, windowHeight, "Window");
 	SetTargetFPS(60);
@@ -61,8 +64,9 @@ int main()
 		snprintf(overlayText, sizeof(overlayText) - 1, "FPS %i", fps);
 		DrawText(overlayText, overlayInset, overlayInset, overlayFontSize, WHITE);
 
-		perfOverlay.render(
-			overlayInset, 2 * overlayInset + overlayFontSize,
+		DrawRectangle(rawWidth, 0, sidebarInset, windowHeight, BLACK);
+		perfSidebar.render(
+			rawWidth + sidebarInset, sidebarInset,
 			worldUpdateTime, updateParticleInteractionsTime, updateSnappedParticlesTime,
 			applySnapPointsTime, worldRenderTime);
 

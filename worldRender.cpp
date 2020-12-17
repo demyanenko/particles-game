@@ -19,11 +19,15 @@ void worldRender(World *world)
     {
         ParticleCellCoord cellCoord =
             particleGridCellIndexToCoord(&world->particleGrid, cellIndices[i]);
+        int cellX = cellCoord.column * world->particleGrid.cellSize;
+        int cellY = cellCoord.row * world->particleGrid.cellSize;
+        int cellWidth = min(world->particleGrid.cellSize, world->config.width - cellX);
+        int cellHeight = min(world->particleGrid.cellSize, world->config.height - cellY);
         DrawRectangleLinesEx(
-            Rectangle({cellCoord.column * world->particleGrid.cellSize * scaleFactor,
-                       cellCoord.row * world->particleGrid.cellSize * scaleFactor,
-                       world->particleGrid.cellSize * scaleFactor,
-                       world->particleGrid.cellSize * scaleFactor}),
+            Rectangle({cellX * scaleFactor,
+                       cellY * scaleFactor,
+                       cellWidth * scaleFactor,
+                       cellHeight * scaleFactor}),
             scaleFactor,
             Color({255, 255, 255, 7}));
     }
