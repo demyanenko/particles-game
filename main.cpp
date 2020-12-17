@@ -1,15 +1,15 @@
 #include <stdio.h>
+#include "perfOverlay.cpp"
 #include "raylib.h"
 #include "world.cpp"
 #include "worldRender.cpp"
 #include "worldUpdate.cpp"
 
-#define NELEMS(x) (sizeof(x) / sizeof(x[0]))
-
-int main() {
+int main()
+{
 	float scaleFactor = 8;
-	float width = 250;
-	float height = 250;
+	int width = 250;
+	int height = 250;
 	int windowWidth = width * scaleFactor;
 	int windowHeight = height * scaleFactor;
 
@@ -19,46 +19,52 @@ int main() {
 	World world;
 	worldInit(&world, scaleFactor, width, height);
 
+	PerfOverlay perfOverlay;
+
 	InitWindow(windowWidth, windowHeight, "Window");
 	SetTargetFPS(60);
 
 	ClearBackground(BLACK);
 
-	while (!WindowShouldClose()) {
+	while (!WindowShouldClose())
+	{
 		int playerAngleDelta = (int)(IsKeyDown(KEY_A)) - (int)(IsKeyDown(KEY_D));
 		int playerThrottle = IsKeyDown(KEY_W);
 		GrowthMode growthMode = IsKeyDown(KEY_SPACE)
-			? GrowthMode::Growing
-			: IsKeyDown(KEY_C)
-				? GrowthMode::Shedding
-				: GrowthMode::Maintaining;
+									? GrowthMode::Growing
+									: IsKeyDown(KEY_C)
+										  ? GrowthMode::Shedding
+										  : GrowthMode::Maintaining;
 		int isPlayerShooting = IsMouseButtonDown(0);
-		
-		float updateStartTime = GetTime();
+
+		double updateParticleInteractionsTime, updateSnappedParticlesTime, applySnapPointsTime;
+		double worldUpdateStart = GetTime();
 		double mouseX = (double)GetMouseX() / scaleFactor;
 		double mouseY = (double)GetMouseY() / scaleFactor;
-		worldUpdate(&world, playerThrottle, playerAngleDelta, growthMode, isPlayerShooting, mouseX, mouseY);
-		float updateEndTime = GetTime();
-		float updateTimeMs = (updateEndTime - updateStartTime) * 1000;
-
+		worldUpdate(
+			&world, playerThrottle, playerAngleDelta, growthMode, isPlayerShooting, mouseX, mouseY,
+			&updateParticleInteractionsTime, &updateSnappedParticlesTime, &applySnapPointsTime);
+		double worldUpdateEnd = GetTime();
+		double worldUpdateTime = worldUpdateEnd - worldUpdateStart;
 
 		// Draw
 		BeginDrawing();
 
-		float renderStartTime = GetTime();
+		double worldRenderStart = GetTime();
 		worldRender(&world);
-		float renderEndTime = GetTime();
-		float renderTimeMs = (renderEndTime - renderStartTime) * 1000;
+		double worldRenderEnd = GetTime();
+		double worldRenderTime = worldRenderEnd - worldRenderStart;
 
 		int fps = GetFPS();
 
 		char overlayText[100];
-		snprintf(overlayText, NELEMS(overlayText) - 1, "FPS %i", fps);
+		snprintf(overlayText, sizeof(overlayText) - 1, "FPS %i", fps);
 		DrawText(overlayText, overlayInset, overlayInset, overlayFontSize, WHITE);
-		snprintf(overlayText, NELEMS(overlayText) - 1, "UPD %2.2f", updateTimeMs);
-		DrawText(overlayText, overlayInset, 2 * overlayInset + overlayFontSize, overlayFontSize, WHITE);
-		snprintf(overlayText, NELEMS(overlayText) - 1, "REN %2.2f", renderTimeMs);
-		DrawText(overlayText, overlayInset, 3 * overlayInset + 2 * overlayFontSize, overlayFontSize, WHITE);
+
+		perfOverlay.render(
+			overlayInset, 2 * overlayInset + overlayFontSize,
+			worldUpdateTime, updateParticleInteractionsTime, updateSnappedParticlesTime,
+			applySnapPointsTime, worldRenderTime);
 
 		EndDrawing();
 	}

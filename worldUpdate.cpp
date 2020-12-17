@@ -407,8 +407,15 @@ void validateParticleGrid(ParticleGrid *particleGrid)
     }
 }
 
-void worldUpdate(World *world, int throttleDelta, int angleDelta, GrowthMode growthMode, bool isPlayerShooting, double mouseX, double mouseY)
+void worldUpdate(
+    World *world, int throttleDelta, int angleDelta, GrowthMode growthMode, bool isPlayerShooting,
+    double mouseX, double mouseY, double *outUpdateParticleInteractionsTime,
+    double *outUpdateSnappedParticlesTime, double *outApplySnapPointsTime)
 {
+    *outUpdateParticleInteractionsTime = 0;
+    *outUpdateSnappedParticlesTime = 0;
+    *outApplySnapPointsTime = 0;
+
     Particle *particles = world->particles;
     ParticleType *particleTypes = world->particleTypes;
     Config *config = &world->config;
@@ -420,11 +427,12 @@ void worldUpdate(World *world, int throttleDelta, int angleDelta, GrowthMode gro
             world->playerAngle + angleDelta * world->config.playerTurnAmount * config->dt, PI * 2);
         world->playerAngleCos = cos(world->playerAngle);
         world->playerAngleSin = sin(world->playerAngle);
-        
+
         double throttle = throttleDelta * world->config.playerThrottleAmount;
         world->particles[0].xv += world->playerAngleCos * throttle * config->dt;
         world->particles[0].yv += -world->playerAngleSin * throttle * config->dt;
 
+        double updateParticleInteractionsStart = GetTime();
         for (int i = 0; i < PARTICLE_COUNT; i++)
         {
             Particle *particle = particles + i;
@@ -441,9 +449,17 @@ void worldUpdate(World *world, int throttleDelta, int angleDelta, GrowthMode gro
                 particle->ya[j] = particle->ya[j + 1];
             }
         }
+        double updateParticleInteractionsEnd = GetTime();
+        *outUpdateParticleInteractionsTime +=
+            updateParticleInteractionsEnd - updateParticleInteractionsStart;
 
+        double updateSnappedParticlesStart = GetTime();
         updateSnappedParticles(world, growthMode);
+        double updateSnappedParticlesEnd = GetTime();
+        *outUpdateSnappedParticlesTime += updateSnappedParticlesEnd - updateSnappedParticlesStart;
         applySnapPoints(world, growthMode);
+        double applySnapPointsEnd = GetTime();
+        *outApplySnapPointsTime += applySnapPointsEnd - updateSnappedParticlesEnd;
 
         for (int i = 0; i < PARTICLE_COUNT; i++)
         {
