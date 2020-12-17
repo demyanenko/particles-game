@@ -2,6 +2,13 @@
 
 #include "world.cpp"
 
+enum class GrowthMode
+{
+    Growing,
+    Maintaining,
+    Shedding
+};
+
 void updateParticleInteractions(World *world, ParticleType *particleType, int particleIndex)
 {
     Particle *particles = world->particles;
@@ -13,7 +20,10 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
     int interactionCount = 0;
 
     int cellIndices[MAX_NEIGHBOR_CELLS];
-    int cellCount = particleGridGetNeighborhoodIndices(&world->particleGrid, particle, cellIndices);
+    ParticleCellCoord particleCellCoord = particleGridGetCellCoord(
+        &world->particleGrid, particle->x, particle->y);
+    int cellCount = particleGridGetNeighborhoodIndices(
+        &world->particleGrid, particleCellCoord, cellIndices);
     for (int i = 0; i < cellCount; i++)
     {
         ParticleCell *particleCell = world->particleGrid.particleCells + cellIndices[i];
@@ -133,7 +143,7 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
         double deltaX = snappedParticle->x - snapPointPos.x;
         double deltaY = snappedParticle->y - snapPointPos.y;
         double distanceSquared = deltaX * deltaX + deltaY * deltaY;
-        double snapRadius = snappedParticle->radius * config->snapPointRadius;
+        double snapRadius = config->snapPointRadius;
         if (distanceSquared >= snapRadius * snapRadius)
         {
             continue;
@@ -202,7 +212,7 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
             double deltaX = snappedParticle->x - snapPointPos.x;
             double deltaY = snappedParticle->y - snapPointPos.y;
             double distanceSquared = deltaX * deltaX + deltaY * deltaY;
-            double snapRadius = snappedParticle->radius * config->snapPointRadius;
+            double snapRadius = config->snapPointRadius;
             if (distanceSquared >= snapRadius * snapRadius)
             {
                 continue;
@@ -244,52 +254,47 @@ void applySnapPoints(World *world, GrowthMode growthMode)
     Particle **snappedParticles = world->snappedParticles;
     SnapPoint *activeSnapPoints = world->activeSnapPoints;
 
-    Particle *particlesAroundPlayer[PARTICLE_COUNT];
-    int particleAroundPlayerCount = 0;
-
-    int cellIndices[MAX_NEIGHBOR_CELLS];
-    int cellCount = particleGridGetNeighborhoodIndices(&world->particleGrid, player, cellIndices);
-    for (int i = 0; i < cellCount; i++)
-    {
-        ParticleCell *particleCell = world->particleGrid.particleCells + cellIndices[i];
-        for (int j = 0; j < particleCell->count; j++)
-        {
-            Particle *particle = particleCell->particles[j];
-            if (particle == player)
-            {
-                continue;
-            }
-            particlesAroundPlayer[particleAroundPlayerCount++] = particle;
-        }
-    }
-
     for (int i = 0; i < world->activeSnapPointCount; i++)
     {
         SnapPoint snapPoint = activeSnapPoints[i];
         SnapPointPos snapPointPos = snapPointGetPos(snapPoint, world);
-
         Particle *closestParticle = NULL;
         double minDistanceSquared = config->snapPointRadius * config->snapPointRadius;
-        for (int j = 0; j < particleAroundPlayerCount; j++)
+
+        int cellIndices[MAX_NEIGHBOR_CELLS];
+        ParticleCellCoord snapPointCellCoord = particleGridGetCellCoord(
+            &world->particleSnapGrid, snapPointPos.x, snapPointPos.y);
+        int cellCount = particleGridGetNeighborhoodIndices(
+            &world->particleSnapGrid, snapPointCellCoord, cellIndices);
+        for (int j = 0; j < cellCount; j++)
         {
-            Particle *particle = particlesAroundPlayer[j];
-            if (!particleTypes[particle->type].isSnappable)
+            ParticleCell *particleSnapCell = world->particleSnapGrid.particleCells + cellIndices[j];
+            for (int k = 0; k < particleSnapCell->count; k++)
             {
-                continue;
-            }
+                Particle *particle = particleSnapCell->particles[k];
+                if (particle == player)
+                {
+                    continue;
+                }
 
-            double deltaX = snapPointPos.x - particle->x;
-            double deltaY = snapPointPos.y - particle->y;
-            double distanceSquared = deltaX * deltaX + deltaY * deltaY;
-            if (distanceSquared >= config->snapPointRadius * config->snapPointRadius)
-            {
-                continue;
-            }
+                if (!particleTypes[particle->type].isSnappable)
+                {
+                    continue;
+                }
 
-            if (distanceSquared < minDistanceSquared)
-            {
-                closestParticle = particle;
-                minDistanceSquared = distanceSquared;
+                double deltaX = snapPointPos.x - particle->x;
+                double deltaY = snapPointPos.y - particle->y;
+                double distanceSquared = deltaX * deltaX + deltaY * deltaY;
+                if (distanceSquared >= config->snapPointRadius * config->snapPointRadius)
+                {
+                    continue;
+                }
+
+                if (distanceSquared < minDistanceSquared)
+                {
+                    closestParticle = particle;
+                    minDistanceSquared = distanceSquared;
+                }
             }
         }
 
@@ -362,7 +367,7 @@ Particle *popClosestSnappedParticle(World *world, double x, double y)
         {
             continue;
         }
-        
+
         double testDistance = pow((testParticle->x - x), 2) + pow((testParticle->y - y), 2);
         if (testDistance < closestDistanceSquared && testParticle->isEdge)
         {
@@ -388,7 +393,7 @@ int compareInts(const void *a, const void *b)
     return *(int *)(a) - *(int *)(b);
 }
 
-void validateParticleGrid(ParticleGrid *particleGrid)
+void validateParticleGrid(ParticleGrid *particleGrid, int *particlePosWithinCell, Particle *particles)
 {
     int totalParticlesInCells = 0;
     int particlePositions[PARTICLE_COUNT];
@@ -397,7 +402,8 @@ void validateParticleGrid(ParticleGrid *particleGrid)
         totalParticlesInCells += particleGrid->particleCells[i].count;
         for (int j = 0; j < particleGrid->particleCells[i].count; j++)
         {
-            particlePositions[j] = particleGrid->particleCells[i].particles[j]->posWithinCell;
+            int particleIndex = particleGrid->particleCells[i].particles[j] - particles;
+            particlePositions[j] = particlePosWithinCell[particleIndex];
         }
         qsort(particlePositions, particleGrid->particleCells[i].count, sizeof(int), compareInts);
         for (int j = 0; j < particleGrid->particleCells[i].count - 1; j++)
@@ -424,9 +430,7 @@ void worldUpdate(
     *outApplySnapPointsTime = 0;
 
     Particle *particles = world->particles;
-    ParticleType *particleTypes = world->particleTypes;
     Config *config = &world->config;
-    ParticleGrid *particleGrid = &world->particleGrid;
 
     for (int t = 0; t < config->physicsStepsPerFrame; t++)
     {
@@ -443,11 +447,15 @@ void worldUpdate(
         for (int i = 0; i < PARTICLE_COUNT; i++)
         {
             Particle *particle = particles + i;
-            ParticleType *particleType = particleTypes + particle->type;
+            ParticleType *particleType = world->particleTypes + particle->type;
             particle->xv *= (1.0 - particleType->friction * config->dt);
             particle->yv *= (1.0 - particleType->friction * config->dt);
             particle->x += particle->xv * config->dt;
             particle->y += particle->yv * config->dt;
+            particleGridUpdateCell(
+                &world->particleGrid, world->particles, particle, world->particleCellIndices + i, world->particlePosWithinCell);
+            particleGridUpdateCell(
+                &world->particleSnapGrid, world->particles, particle, world->particleSnapCellIndices + i, world->particlePosWithinSnapCell);
 
             updateParticleInteractions(world, particleType, i);
             for (int j = 0; j < particleType->steps; j++)
@@ -474,10 +482,14 @@ void worldUpdate(
             particle->xv += particle->xa[0] * config->dt;
             particle->yv += particle->ya[0] * config->dt;
             updateWallCollisions(particle, config);
-            particleGridUpdateCell(particleGrid, particle, i);
+            particleGridUpdateCell(
+                &world->particleGrid, world->particles, particle, world->particleCellIndices + i, world->particlePosWithinCell);
+            particleGridUpdateCell(
+                &world->particleSnapGrid, world->particles, particle, world->particleSnapCellIndices + i, world->particlePosWithinSnapCell);
         }
 
-        validateParticleGrid(particleGrid);
+        validateParticleGrid(&world->particleGrid, world->particlePosWithinCell, world->particles);
+        validateParticleGrid(&world->particleSnapGrid, world->particlePosWithinSnapCell, world->particles);
     }
 
     double now = GetTime();

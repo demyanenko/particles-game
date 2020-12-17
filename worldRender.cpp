@@ -13,8 +13,10 @@ void worldRender(World *world)
         world->config.backgroundColor);
 
     int cellIndices[MAX_NEIGHBOR_CELLS];
+    ParticleCellCoord playerCellCoord = particleGridGetCellCoord(
+        &world->particleGrid, world->particles[0].x, world->particles[0].y);
     int cellCount = particleGridGetNeighborhoodIndices(
-        &world->particleGrid, world->particles, cellIndices);
+        &world->particleGrid, playerCellCoord, cellIndices);
     for (int i = 0; i < cellCount; i++)
     {
         ParticleCellCoord cellCoord =

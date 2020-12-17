@@ -13,8 +13,6 @@ struct Particle
     double yv;
     double xa[MAX_STEPS];
     double ya[MAX_STEPS];
-    int cellIndex;
-    int posWithinCell;
     bool isSnapped;
     bool isEdge;
 };
@@ -33,7 +31,5 @@ void particleInit(Particle *particle, int type, double x, double y, float size)
         particle->xa[i] = 0;
         particle->ya[i] = 0;
     }
-    particle->cellIndex = -1;
-    particle->posWithinCell = -1;
     particle->isSnapped = false;
 }

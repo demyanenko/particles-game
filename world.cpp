@@ -12,13 +12,6 @@
 #define PARTICLE_COUNT 250
 #define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
 
-enum class GrowthMode
-{
-    Growing,
-    Maintaining,
-    Shedding
-};
-
 struct SnapPoint
 {
     int u;
@@ -51,6 +44,11 @@ struct World
     SnapPoint activeSnapPoints[SNAP_POINT_COUNT];
     int activeSnapPointCount;
     ParticleGrid particleGrid;
+    int particleCellIndices[PARTICLE_COUNT];
+    int particlePosWithinCell[PARTICLE_COUNT];
+    ParticleGrid particleSnapGrid;
+    int particleSnapCellIndices[PARTICLE_COUNT];
+    int particlePosWithinSnapCell[PARTICLE_COUNT];
     double playerAngle;
     double playerAngleCos;
     double playerAngleSin;
@@ -62,18 +60,6 @@ void worldInit(World *world, float scaleFactor, int width, int height)
     configInit(&world->config, scaleFactor, width, height);
 
     initParticleTypes(world->particleTypes);
-    double maxInteractionRadius = 0;
-    for (int i = 0; i < PARTICLE_TYPE_COUNT; i++)
-    {
-        for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
-        {
-            double radius = world->particleTypes[i].radius[j];
-            if (radius > maxInteractionRadius)
-            {
-                maxInteractionRadius = radius;
-            }
-        }
-    }
 
     particleInit(world->particles, 0, width / 2, height / 2, 4);
 
@@ -89,9 +75,25 @@ void worldInit(World *world, float scaleFactor, int width, int height)
     memset(world->snappedParticles, 0, MAX_SNAP_KEY * sizeof(Particle *));
     world->activeSnapPointCount = 0;
 
+    double maxInteractionRadius = 0;
+    for (int i = 0; i < PARTICLE_TYPE_COUNT; i++)
+    {
+        for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
+        {
+            double radius = world->particleTypes[i].radius[j];
+            if (radius > maxInteractionRadius)
+            {
+                maxInteractionRadius = radius;
+            }
+        }
+    }
     particleGridInit(
-        &world->particleGrid, width, height, ceilf(maxInteractionRadius), world->particles,
-        PARTICLE_COUNT);
+        &world->particleGrid, width, height, ceil(maxInteractionRadius), world->particles,
+        world->particleCellIndices, world->particlePosWithinCell, PARTICLE_COUNT);
+
+    particleGridInit(
+        &world->particleSnapGrid, width, height, ceil(world->config.snapPointRadius),
+        world->particles, world->particleSnapCellIndices, world->particlePosWithinSnapCell, PARTICLE_COUNT);
 
     world->playerAngle = PI / 2;
     world->playerLastShot = 0;
