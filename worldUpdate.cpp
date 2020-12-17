@@ -81,13 +81,9 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
         world->currentSnappedParticles == &world->snappedParticles1
             ? &world->snappedParticles2
             : &world->snappedParticles1;
-    std::unordered_set<int> *bfsVisited = &world->bfsVisited;
-    std::unordered_set<int> *growingSnapPointsVisited = &world->growingSnapPointsVisited;
     SnapPoint *activeSnapPoints = world->activeSnapPoints;
-    
+
     newSnappedParticles->clear();
-    bfsVisited->clear();
-    growingSnapPointsVisited->clear();
 
     world->activeSnapPointCount = 0;
     for (int i = 0; i < PARTICLE_COUNT; i++)
@@ -97,31 +93,104 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
     }
     particles[0].isSnapped = true;
 
+    if (growthMode == GrowthMode::Shedding)
     {
-        if (growthMode == GrowthMode::Shedding)
+        world->currentSnappedParticles = newSnappedParticles;
+        return;
+    }
+
+    SnapPoint snapPointQueue[SNAP_POINT_COUNT];
+    int bfsPopIndex = 0;
+    int bfsPushIndex = 0;
+    bool bfsVisited[MAX_SNAP_KEY];
+    memset(bfsVisited, false, sizeof(bfsVisited));
+    bool growingSnapPointsVisited[MAX_SNAP_KEY];
+    memset(growingSnapPointsVisited, false, sizeof(bfsVisited));
+    SnapPoint playerSnapPoints[6] = {
+        snapPointCreate(-1, -2),
+        snapPointCreate(1, -2),
+        snapPointCreate(2, 0),
+        snapPointCreate(1, 2),
+        snapPointCreate(-1, 2),
+        snapPointCreate(-2, 0)};
+    for (int i = 0; i < 6; i++)
+    {
+        SnapPoint snapPoint = playerSnapPoints[i];
+
+        int snapPointKey = snapPointGetKey(snapPoint);
+        if (growthMode == GrowthMode::Growing)
         {
-            world->currentSnappedParticles = newSnappedParticles;
-            return;
+            growingSnapPointsVisited[snapPointKey] = true;
+            activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
         }
 
-        SnapPoint snapPointQueue[SNAP_POINT_COUNT];
-        int bfsPopIndex = 0;
-        int bfsPushIndex = 0;
-        SnapPoint playerSnapPoints[6] = {
-            snapPointCreate(-1, -2),
-            snapPointCreate(1, -2),
-            snapPointCreate(2, 0),
-            snapPointCreate(1, 2),
-            snapPointCreate(-1, 2),
-            snapPointCreate(-2, 0)};
-        for (int i = 0; i < 6; i++)
+        if ((*snappedParticles).count(snapPointKey) == 0)
         {
-            SnapPoint snapPoint = playerSnapPoints[i];
+            continue;
+        }
+
+        SnapPointPos snapPointPos = snapPointGetPos(snapPoint, world);
+        Particle *snappedParticle = (*snappedParticles)[snapPointKey];
+        double deltaX = snappedParticle->x - snapPointPos.x;
+        double deltaY = snappedParticle->y - snapPointPos.y;
+        double distanceSquared = deltaX * deltaX + deltaY * deltaY;
+        double snapRadius = snappedParticle->radius * config->snapPointRadius;
+        if (distanceSquared >= snapRadius * snapRadius)
+        {
+            continue;
+        }
+
+        newSnappedParticles->insert({snapPointKey, snappedParticle});
+        bfsVisited[snapPointKey] = true;
+        snapPointQueue[bfsPushIndex++] = snapPoint;
+
+        if (growthMode == GrowthMode::Maintaining)
+        {
+            activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
+        }
+    }
+
+    int currBfsDepth = 1;
+    int remainingAtCurrBfsDepth = bfsPushIndex;
+
+    double playerSnapDistance = player->radius + 1;
+    while (bfsPopIndex != bfsPushIndex && currBfsDepth <= config->maxSnapDepth)
+    {
+        SnapPoint sourceSnapPoint = snapPointQueue[bfsPopIndex++];
+
+        int sourceSnapPointKey = snapPointGetKey(sourceSnapPoint);
+        Particle *sourceParticle = (*snappedParticles)[sourceSnapPointKey];
+        sourceParticle->isSnapped = true;
+        SnapPoint snapPoints[4] = {
+            snapPointCreate(sourceSnapPoint.u - 1, sourceSnapPoint.v),
+            snapPointCreate(sourceSnapPoint.u + 1, sourceSnapPoint.v),
+            snapPointCreate(sourceSnapPoint.u, sourceSnapPoint.v - 1),
+            snapPointCreate(sourceSnapPoint.u, sourceSnapPoint.v + 1)};
+        int queueContributions = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            SnapPoint snapPoint = snapPoints[i];
+            SnapPointPos snapPointPos = snapPointGetPos(snapPoint, world);
+            double snapPointDeltaX = snapPointPos.x - player->x;
+            double snapPointDeltaY = snapPointPos.y - player->y;
+            double snapPointDistanceSquared =
+                snapPointDeltaX * snapPointDeltaX + snapPointDeltaY * snapPointDeltaY;
+            if (snapPointDistanceSquared < playerSnapDistance * playerSnapDistance)
+            {
+                continue;
+            }
 
             int snapPointKey = snapPointGetKey(snapPoint);
-            if (growthMode == GrowthMode::Growing)
+            if (bfsVisited[snapPointKey])
             {
-                growingSnapPointsVisited->insert(snapPointKey);
+                continue;
+            }
+
+            if (growthMode == GrowthMode::Growing &&
+                currBfsDepth + 1 <= config->maxSnapDepth &&
+                !growingSnapPointsVisited[snapPointKey])
+            {
+                growingSnapPointsVisited[snapPointKey] = true;
                 activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
             }
 
@@ -130,7 +199,6 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
                 continue;
             }
 
-            SnapPointPos snapPointPos = snapPointGetPos(snapPoint, world);
             Particle *snappedParticle = (*snappedParticles)[snapPointKey];
             double deltaX = snappedParticle->x - snapPointPos.x;
             double deltaY = snappedParticle->y - snapPointPos.y;
@@ -142,101 +210,31 @@ void updateSnappedParticles(World *world, GrowthMode growthMode)
             }
 
             newSnappedParticles->insert({snapPointKey, snappedParticle});
-            bfsVisited->insert(snapPointKey);
-            snapPointQueue[bfsPushIndex++] = snapPoint;
-
-            if (growthMode == GrowthMode::Maintaining)
+            if (growthMode == GrowthMode::Maintaining &&
+                currBfsDepth + 1 <= config->maxSnapDepth)
             {
                 activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
             }
+
+            bfsVisited[snapPointKey] = true;
+            snapPointQueue[bfsPushIndex++] = snapPoint;
+            queueContributions++;
         }
 
-        int currBfsDepth = 1;
-        int remainingAtCurrBfsDepth = bfsPushIndex;
-
-        double playerSnapDistance = player->radius + 1;
-        while (bfsPopIndex != bfsPushIndex && currBfsDepth <= config->maxSnapDepth)
+        if (queueContributions == 0)
         {
-            SnapPoint sourceSnapPoint = snapPointQueue[bfsPopIndex++];
-
-            int sourceSnapPointKey = snapPointGetKey(sourceSnapPoint);
-            Particle *sourceParticle = (*snappedParticles)[sourceSnapPointKey];
-            sourceParticle->isSnapped = true;
-            SnapPoint snapPoints[4] = {
-                snapPointCreate(sourceSnapPoint.u - 1, sourceSnapPoint.v),
-                snapPointCreate(sourceSnapPoint.u + 1, sourceSnapPoint.v),
-                snapPointCreate(sourceSnapPoint.u, sourceSnapPoint.v - 1),
-                snapPointCreate(sourceSnapPoint.u, sourceSnapPoint.v + 1)};
-            int queueContributions = 0;
-            for (int i = 0; i < 4; i++)
-            {
-                SnapPoint snapPoint = snapPoints[i];
-                SnapPointPos snapPointPos = snapPointGetPos(snapPoint, world);
-                double snapPointDeltaX = snapPointPos.x - player->x;
-                double snapPointDeltaY = snapPointPos.y - player->y;
-                double snapPointDistanceSquared =
-                    snapPointDeltaX * snapPointDeltaX + snapPointDeltaY * snapPointDeltaY;
-                if (snapPointDistanceSquared < playerSnapDistance * playerSnapDistance)
-                {
-                    continue;
-                }
-
-                int snapPointKey = snapPointGetKey(snapPoint);
-                if (bfsVisited->count(snapPointKey) == 1)
-                {
-                    continue;
-                }
-
-                if (growthMode == GrowthMode::Growing &&
-                    currBfsDepth + 1 <= config->maxSnapDepth &&
-                    growingSnapPointsVisited->count(snapPointKey) == 0)
-                {
-                    growingSnapPointsVisited->insert(snapPointKey);
-                    activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
-                }
-
-                if ((*snappedParticles).count(snapPointKey) == 0)
-                {
-                    continue;
-                }
-
-                Particle *snappedParticle = (*snappedParticles)[snapPointKey];
-                double deltaX = snappedParticle->x - snapPointPos.x;
-                double deltaY = snappedParticle->y - snapPointPos.y;
-                double distanceSquared = deltaX * deltaX + deltaY * deltaY;
-                double snapRadius = snappedParticle->radius * config->snapPointRadius;
-                if (distanceSquared >= snapRadius * snapRadius)
-                {
-                    continue;
-                }
-
-                newSnappedParticles->insert({snapPointKey, snappedParticle});
-                if (growthMode == GrowthMode::Maintaining &&
-                    currBfsDepth + 1 <= config->maxSnapDepth)
-                {
-                    activeSnapPoints[world->activeSnapPointCount++] = snapPoint;
-                }
-
-                bfsVisited->insert(snapPointKey);
-                snapPointQueue[bfsPushIndex++] = snapPoint;
-                queueContributions++;
-            }
-
-            if (queueContributions == 0)
-            {
-                sourceParticle->isEdge = true;
-            }
-
-            remainingAtCurrBfsDepth--;
-            if (remainingAtCurrBfsDepth == 0)
-            {
-                currBfsDepth++;
-                remainingAtCurrBfsDepth = bfsPushIndex - bfsPopIndex;
-            }
+            sourceParticle->isEdge = true;
         }
 
-        world->currentSnappedParticles = newSnappedParticles;
+        remainingAtCurrBfsDepth--;
+        if (remainingAtCurrBfsDepth == 0)
+        {
+            currBfsDepth++;
+            remainingAtCurrBfsDepth = bfsPushIndex - bfsPopIndex;
+        }
     }
+
+    world->currentSnappedParticles = newSnappedParticles;
 }
 
 void applySnapPoints(World *world, GrowthMode growthMode)
@@ -354,6 +352,30 @@ void updateWallCollisions(Particle *particle, Config *config)
     }
 }
 
+Particle *popClosestSnappedParticle(World *world, double x, double y)
+{
+    std::unordered_map<int, Particle *> *snappedParticles = world->currentSnappedParticles;
+    double closestDistanceSq = 10000000;
+    auto closestIter = snappedParticles->end();
+    for (auto it = snappedParticles->begin(); it != snappedParticles->end(); it++)
+    {
+        Particle *testParticle = it->second;
+        double testDistance = pow((testParticle->x - x), 2) + pow((testParticle->y - y), 2);
+        if (testDistance < closestDistanceSq && testParticle->isEdge)
+        {
+            closestDistanceSq = testDistance;
+            closestIter = it;
+        }
+    }
+    Particle *out = nullptr;
+    if (closestIter != snappedParticles->end())
+    {
+        out = closestIter->second;
+        snappedParticles->erase(closestIter);
+    }
+    return out;
+}
+
 int compareInts(const void *a, const void *b)
 {
     return *(int *)(a) - *(int *)(b);
@@ -394,11 +416,14 @@ void worldUpdate(World *world, int throttleDelta, int angleDelta, GrowthMode gro
 
     for (int t = 0; t < config->physicsStepsPerFrame; t++)
     {
-        world->playerAngle = fmodf(
+        world->playerAngle = fmod(
             world->playerAngle + angleDelta * world->config.playerTurnAmount * config->dt, PI * 2);
+        world->playerAngleCos = cos(world->playerAngle);
+        world->playerAngleSin = sin(world->playerAngle);
+        
         double throttle = throttleDelta * world->config.playerThrottleAmount;
-        world->particles[0].xv += cos(world->playerAngle) * throttle * config->dt;
-        world->particles[0].yv += -sin(world->playerAngle) * throttle * config->dt;
+        world->particles[0].xv += world->playerAngleCos * throttle * config->dt;
+        world->particles[0].yv += -world->playerAngleSin * throttle * config->dt;
 
         for (int i = 0; i < PARTICLE_COUNT; i++)
         {

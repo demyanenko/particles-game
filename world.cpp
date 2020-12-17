@@ -9,7 +9,6 @@
 #include "particleGrid.cpp"
 #include "particleTypes.cpp"
 #include <unordered_map>
-#include <unordered_set>
 
 #define PARTICLE_COUNT 250
 #define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
@@ -19,13 +18,6 @@ enum class GrowthMode
     Growing,
     Maintaining,
     Shedding
-};
-
-struct ActiveSnapPoint
-{
-    int index;
-    double x;
-    double y;
 };
 
 struct SnapPoint
@@ -39,9 +31,16 @@ SnapPoint snapPointCreate(int u, int v)
     return SnapPoint({u, v});
 }
 
-int snapPointGetKey(SnapPoint snapPoint)
+#define MAX_SNAP_RADIUS (MAX_SNAP_DEPTH + 5)
+#define MAX_SNAP_DIAMETER (2 * MAX_SNAP_RADIUS)
+#define MAX_SNAP_KEY (MAX_SNAP_DIAMETER * MAX_SNAP_DIAMETER)
+
+unsigned int snapPointGetKey(SnapPoint snapPoint)
 {
-    return 10000 * snapPoint.u + snapPoint.v;
+    long long result = MAX_SNAP_DIAMETER * (snapPoint.u + MAX_SNAP_RADIUS) + snapPoint.v + MAX_SNAP_RADIUS;
+    assertOrAbort(result >= 0, "Snap point key underflow");
+    assertOrAbort(result < MAX_SNAP_KEY, "Snap point key overflow");
+    return (unsigned int)result;
 }
 
 struct World
@@ -52,38 +51,14 @@ struct World
     std::unordered_map<int, Particle *> snappedParticles1;
     std::unordered_map<int, Particle *> snappedParticles2;
     std::unordered_map<int, Particle *> *currentSnappedParticles;
-    std::unordered_set<int> bfsVisited;
-    std::unordered_set<int> growingSnapPointsVisited;
     SnapPoint activeSnapPoints[SNAP_POINT_COUNT];
     int activeSnapPointCount;
     ParticleGrid particleGrid;
     double playerAngle;
+    double playerAngleCos;
+    double playerAngleSin;
     double playerLastShot;
 };
-
-Particle *popClosestSnappedParticle(World *world, double x, double y)
-{
-    std::unordered_map<int, Particle *> *snappedParticles = world->currentSnappedParticles;
-    double closestDistanceSq = 10000000;
-    auto closestIter = snappedParticles->end();
-    for (auto it = snappedParticles->begin(); it != snappedParticles->end(); it++)
-    {
-        Particle *testParticle = it->second;
-        double testDistance = pow((testParticle->x - x), 2) + pow((testParticle->y - y), 2);
-        if (testDistance < closestDistanceSq && testParticle->isEdge)
-        {
-            closestDistanceSq = testDistance;
-            closestIter = it;
-        }
-    }
-    Particle *out = nullptr;
-    if (closestIter != snappedParticles->end())
-    {
-        out = closestIter->second;
-        snappedParticles->erase(closestIter);
-    }
-    return out;
-}
 
 void worldInit(World *world, float scaleFactor, int width, int height)
 {
@@ -134,13 +109,13 @@ struct SnapPointPos
 SnapPointPos snapPointGetPos(SnapPoint snapPoint, World *world)
 {
     double snapStep = 3;
-    double fwdAngle = world->playerAngle;
-    double sideAngle = world->playerAngle - PI / 2;
+    double playerSideAngleCos = world->playerAngleSin;
+    double playerSideAngleSin = -world->playerAngleCos;
     double snapPointX = world->particles[0].x;
     double snapPointY = world->particles[0].y;
-    snapPointX += snapPoint.u * cos(sideAngle) * snapStep;
-    snapPointY -= snapPoint.u * sin(sideAngle) * snapStep;
-    snapPointX += snapPoint.v * cos(fwdAngle) * snapStep;
-    snapPointY -= snapPoint.v * sin(fwdAngle) * snapStep;
+    snapPointX += snapPoint.u * playerSideAngleCos * snapStep;
+    snapPointY -= snapPoint.u * playerSideAngleSin * snapStep;
+    snapPointX += snapPoint.v * world->playerAngleCos * snapStep;
+    snapPointY -= snapPoint.v * world->playerAngleSin * snapStep;
     return {snapPointX, snapPointY};
 }

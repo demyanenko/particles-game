@@ -71,7 +71,7 @@
             "args": [
                 "&",
                 "cl.exe",
-                "/Femain.exe",
+                "/Femain-cl.exe",
                 "main.cpp",
                 "C:\\raylib-msvc\\lib\\raylib.lib",
                 "/std:c++14",

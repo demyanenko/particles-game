@@ -21,6 +21,8 @@ struct Config
     double playerReloadTime;
 };
 
+#define MAX_SNAP_DEPTH 20
+
 void configInit(Config *config, float scaleFactor, int width, int height)
 {
     config->physicsStepsPerFrame = 20;
@@ -29,7 +31,7 @@ void configInit(Config *config, float scaleFactor, int width, int height)
     config->baseRepelFactor = 3600;
     config->snapPointRadius = sqrt(2);
     config->snapPointForce = 10000;
-    config->maxSnapDepth = 20;
+    config->maxSnapDepth = MAX_SNAP_DEPTH;
     config->playerThrottleAmount = 1800;
     config->playerTurnAmount = 0.6 * PI;
     config->scaleFactor = scaleFactor;
