@@ -102,6 +102,69 @@ int main()
 			printParticleTypes(&world, requestedParticleTypes);
 		}
 
+		int saveSlot = -1;
+		if (IsKeyPressed(KEY_F1))
+		{
+			saveSlot = 1;
+		}
+		else if (IsKeyPressed(KEY_F2))
+		{
+			saveSlot = 2;
+		}
+		else if (IsKeyPressed(KEY_F3))
+		{
+			saveSlot = 3;
+		}
+		else if (IsKeyPressed(KEY_F4))
+		{
+			saveSlot = 4;
+		}
+		else if (IsKeyPressed(KEY_F5))
+		{
+			saveSlot = 5;
+		}
+		else if (IsKeyPressed(KEY_F6))
+		{
+			saveSlot = 6;
+		}
+		else if (IsKeyPressed(KEY_F7))
+		{
+			saveSlot = 7;
+		}
+		else if (IsKeyPressed(KEY_F8))
+		{
+			saveSlot = 8;
+		}
+		else if (IsKeyPressed(KEY_F9))
+		{
+			saveSlot = 9;
+		}
+		else if (IsKeyPressed(KEY_F10))
+		{
+			saveSlot = 10;
+		}
+		else if (IsKeyPressed(KEY_F11))
+		{
+			saveSlot = 11;
+		}
+		else if (IsKeyPressed(KEY_F12))
+		{
+			saveSlot = 12;
+		}
+
+		if (saveSlot != -1)
+		{
+			if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT))
+			{
+				worldInit(&world, scaleFactor, width, height);
+				loadParticleTypes(world.particleTypes, saveSlot);
+			}
+			else
+			{
+				saveParticleTypes(world.particleTypes, saveSlot);
+			}
+		}
+
 		if (IsKeyPressed(KEY_B))
 		{
 			// Breakpoint

@@ -150,3 +150,63 @@ void initParticleTypes(ParticleType *particleTypes)
     particleTypes[4].steps = 1 * PHYSICS_STEPS_PER_FRAME;
     particleTypes[4].isSnappable = false;
 }
+
+void saveParticleTypes(ParticleType *particleTypes, int slot)
+{
+    char filename[10];
+    snprintf(filename, 10, "save%i.sav", slot);
+    FILE *file = fopen(filename, "w");
+
+    fprintf(file, "%i\n", PARTICLE_TYPE_COUNT);
+
+    for (int i = 0; i < PARTICLE_TYPE_COUNT; i++)
+    {
+        fprintf(file, "%f - %i_friction\n", particleTypes[i].friction, i);
+        fprintf(file, "%i - %i_steps\n", int(particleTypes[i].steps / PHYSICS_STEPS_PER_FRAME), i);
+        fprintf(file, "%i - %i_isSnappable\n", particleTypes[i].isSnappable, i);
+        
+        for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
+        {
+            fprintf(file, "%f - force_%i<-%i\n", particleTypes[i].force[j], i, j);
+            fprintf(file, "%f - radius_%i<-%i\n", particleTypes[i].radius[j], i, j);
+        }
+    }
+
+    fclose(file);
+    printf("Saved %s\n", filename);
+}
+
+void loadParticleTypes(ParticleType *particleTypes, int slot)
+{
+    char filename[10];
+    snprintf(filename, 10, "save%i.sav", slot);
+    FILE *file = fopen(filename, "r");
+
+    int particleTypeCount;
+    fscanf(file, "%i\n", &particleTypeCount);
+    assertOrAbort(particleTypeCount == PARTICLE_TYPE_COUNT, "Particle type count mismatch");
+
+    for (int i = 0; i < PARTICLE_TYPE_COUNT; i++)
+    {
+        fscanf(file, "%f - %*s\n", &particleTypes[i].friction);
+        int steps;
+        fscanf(file, "%i - %*s\n", &steps);
+        particleTypes[i].steps = steps * PHYSICS_STEPS_PER_FRAME;
+        int isSnappable;
+        fscanf(file, "%i - %*s\n", &isSnappable);
+        particleTypes[i].isSnappable = isSnappable;
+        
+        for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
+        {
+            float force;
+            fscanf(file, "%f - %*s\n", &force);
+            particleTypes[i].force[j] = force;
+            float radius;
+            fscanf(file, "%f - %*s\n", &radius);
+            particleTypes[i].radius[j] = radius;
+        }
+    }
+
+    fclose(file);
+    printf("Loaded %s\n", filename);
+}
