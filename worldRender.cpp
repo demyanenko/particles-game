@@ -34,15 +34,19 @@ void worldRender(World *world)
             Color({255, 255, 255, 7}));
     }
 
-    for (int i = 0; i < world->activeSnapPointCount; i++)
+    for (int i = 0; i < PLAYER_COUNT; i++)
     {
-        SnapPoint snapPoint = world->activeSnapPoints[i];
-        SnapPointPos snapPointPos = snapPointGetPos(snapPoint, world);
-        DrawCircle(
-            snapPointPos.x * scaleFactor,
-            snapPointPos.y * scaleFactor,
-            world->config.snapPointRadius * scaleFactor,
-            Color({255, 255, 255, 31}));
+        Player *player = world->players + i;
+        for (int j = 0; j < player->activeSnapPointCount; j++)
+        {
+            SnapPoint snapPoint = player->activeSnapPoints[j];
+            SnapPointPos snapPointPos = snapPointGetPos(snapPoint, player);
+            DrawCircle(
+                snapPointPos.x * scaleFactor,
+                snapPointPos.y * scaleFactor,
+                world->config.snapPointRadius * scaleFactor,
+                Color({255, 255, 255, 31}));
+        }
     }
 
     for (int i = 0; i < PARTICLE_COUNT; i++)
@@ -70,11 +74,28 @@ void worldRender(World *world)
         }
     }
 
-    DrawLineEx(
-        Vector2({float(world->particles[0].x + cos(world->playerAngle) * world->particles[0].radius) * scaleFactor,
-                 float(world->particles[0].y - sin(world->playerAngle) * world->particles[0].radius) * scaleFactor}),
-        Vector2({float(world->particles[0].x) * scaleFactor,
-                 float(world->particles[0].y) * scaleFactor}),
-        0.5 * scaleFactor,
-        WHITE);
+    for (int i = 0; i < PLAYER_COUNT; i++)
+    {
+        Player *player = world->players + i;
+        DrawLineEx(
+            Vector2({float(world->particles[i].x + cos(player->angle) * world->particles[i].radius) * scaleFactor,
+                     float(world->particles[i].y - sin(player->angle) * world->particles[i].radius) * scaleFactor}),
+            Vector2({float(world->particles[i].x) * scaleFactor,
+                     float(world->particles[i].y) * scaleFactor}),
+            0.5 * scaleFactor,
+            WHITE);
+        double damageFraction = 1.0 - 1.0 * world->particles[i].hp / world->particleTypes[PLAYER_PARTICLE_TYPE].defaultHp;
+        DrawCircle(
+            int(world->particles[i].x * scaleFactor),
+            int(world->particles[i].y * scaleFactor),
+            damageFraction * world->particles[i].radius * scaleFactor,
+            Color({255, 0, 0, 127}));
+    }
+
+    Particle *playerParticle = world->particles;
+    DrawCircle(
+        int(playerParticle->x * scaleFactor),
+        int(playerParticle->y * scaleFactor),
+        playerParticle->radius *scaleFactor,
+        Color({0, 0, 255, 63}));
 }

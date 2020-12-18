@@ -16,11 +16,12 @@ struct Particle
     double yv;
     double xa[MAX_STEPS_PER_FRAME];
     double ya[MAX_STEPS_PER_FRAME];
+    int hp;
     bool isSnapped;
     bool isEdge;
 };
 
-void particleInit(Particle *particle, int type, double x, double y, float size)
+void particleInit(Particle *particle, int type, double x, double y, float size, int hp)
 {
     particle->type = type;
     particle->radius = size;
@@ -34,5 +35,6 @@ void particleInit(Particle *particle, int type, double x, double y, float size)
         particle->xa[i] = 0;
         particle->ya[i] = 0;
     }
+    particle->hp = hp;
     particle->isSnapped = false;
 }

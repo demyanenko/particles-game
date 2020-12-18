@@ -48,8 +48,9 @@ int main()
 
 	World world;
 	worldInit(&world, scaleFactor, width, height);
-
 	PerfSidebar perfSidebar;
+	
+    srand(time(0));
 
 	InitWindow(windowWidth, windowHeight, "Window");
 	SetTargetFPS(60);
@@ -58,15 +59,6 @@ int main()
 
 	while (!WindowShouldClose())
 	{
-		int playerAngleDelta = (int)(IsKeyDown(KEY_A)) - (int)(IsKeyDown(KEY_D));
-		int playerThrottle = IsKeyDown(KEY_W);
-		GrowthMode growthMode = IsKeyDown(KEY_SPACE)
-									? GrowthMode::Growing
-									: IsKeyDown(KEY_C)
-										  ? GrowthMode::Shedding
-										  : GrowthMode::Maintaining;
-		int isPlayerShooting = IsMouseButtonDown(0);
-
 		if (IsKeyPressed(KEY_R))
 		{
 			worldInit(&world, scaleFactor, width, height);
@@ -169,14 +161,26 @@ int main()
 		{
 			// Breakpoint
 			int a = 0;
+			a = a;
 		}
+
+		int playerAngleDelta = (int)(IsKeyDown(KEY_A)) - (int)(IsKeyDown(KEY_D));
+		int playerThrottle = IsKeyDown(KEY_W);
+		GrowthMode growthMode = IsKeyDown(KEY_SPACE)
+									? GrowthMode::Growing
+									: IsKeyDown(KEY_C)
+										  ? GrowthMode::Shedding
+										  : GrowthMode::Maintaining;
+		int isPlayerShooting = IsMouseButtonDown(0);
+		double mouseX = (double)GetMouseX() / scaleFactor;
+		double mouseY = (double)GetMouseY() / scaleFactor;
+		PlayerInput playerInput = playerInputCreate(
+			playerThrottle, playerAngleDelta, growthMode, isPlayerShooting, mouseX, mouseY);
 
 		double updateParticleInteractionsTime, updateSnappedParticlesTime, applySnapPointsTime;
 		double worldUpdateStart = GetTime();
-		double mouseX = (double)GetMouseX() / scaleFactor;
-		double mouseY = (double)GetMouseY() / scaleFactor;
 		worldUpdate(
-			&world, playerThrottle, playerAngleDelta, growthMode, isPlayerShooting, mouseX, mouseY,
+			&world, playerInput,
 			&updateParticleInteractionsTime, &updateSnappedParticlesTime, &applySnapPointsTime);
 		double worldUpdateEnd = GetTime();
 		double worldUpdateTime = worldUpdateEnd - worldUpdateStart;

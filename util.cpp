@@ -27,3 +27,8 @@ int max(int a, int b)
 {
     return a > b ? a : b;
 }
+
+double getRandomDouble()
+{
+    return 1.0 * rand() / RAND_MAX;
+}

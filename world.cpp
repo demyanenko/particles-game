@@ -4,82 +4,58 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "bot.cpp"
 #include "config.cpp"
 #include "particle.cpp"
 #include "particleGrid.cpp"
 #include "particleTypes.cpp"
+#include "player.cpp"
 
 #define PARTICLE_COUNT 640
-#define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
 
-struct SnapPoint
-{
-    int u;
-    int v;
-};
-
-SnapPoint snapPointCreate(int u, int v)
-{
-    return SnapPoint({u, v});
-}
-
-#define MAX_SNAP_RADIUS (MAX_SNAP_DEPTH + 5)
-#define MAX_SNAP_DIAMETER (2 * MAX_SNAP_RADIUS)
-#define MAX_SNAP_KEY (MAX_SNAP_DIAMETER * MAX_SNAP_DIAMETER)
-
-unsigned int snapPointGetKey(SnapPoint snapPoint)
-{
-    long long result = MAX_SNAP_DIAMETER * (snapPoint.u + MAX_SNAP_RADIUS) + snapPoint.v + MAX_SNAP_RADIUS;
-    assertOrAbort(result >= 0, "Snap point key underflow");
-    assertOrAbort(result < MAX_SNAP_KEY, "Snap point key overflow");
-    return (unsigned int)result;
-}
+#define PLAYER_COUNT (1 + BOT_COUNT)
 
 struct World
 {
     Config config;
     ParticleType particleTypes[PARTICLE_TYPE_COUNT];
     Particle particles[PARTICLE_COUNT];
-    Particle *snappedParticles[MAX_SNAP_KEY];
-    SnapPoint activeSnapPoints[SNAP_POINT_COUNT];
-    int activeSnapPointCount;
     ParticleGrid particleGrid;
     int particleCellIndices[PARTICLE_COUNT];
     int particlePosWithinCell[PARTICLE_COUNT];
     ParticleGrid particleSnapGrid;
     int particleSnapCellIndices[PARTICLE_COUNT];
     int particlePosWithinSnapCell[PARTICLE_COUNT];
-    double playerAngle;
-    double playerAngleCos;
-    double playerAngleSin;
-    double playerLastShot;
+    Player players[PLAYER_COUNT];
+    Bot bots[BOT_COUNT];
 };
 
 void worldInit(World *world, float scaleFactor, int width, int height)
 {
     configInit(&world->config, scaleFactor, width, height);
 
-    initParticleTypesRandom(world->particleTypes, &world->config);
+    initParticleTypes(world->particleTypes);
 
-    particleInit(world->particles, 0, width / 2, height / 2, 4);
-    srand(time(0));
-    for (int i = 1; i < PARTICLE_COUNT; i++)
+    int playerSize = world->config.playerSize;
+    int playerHp = world->particleTypes[PLAYER_PARTICLE_TYPE].defaultHp;
+    particleInit(
+        world->particles, PLAYER_PARTICLE_TYPE, width / 2, height / 2, playerSize, playerHp);
+
+    for (int i = 1; i < 1 + world->config.botCount; i++)
     {
-        int particleType = i < 0.8 * PARTICLE_COUNT
-                               ? 1
-                               : i < 0.9 * PARTICLE_COUNT
-                                     ? 3
-                                     : 4;
-        particleType = 1 + i % (PARTICLE_TYPE_COUNT - 1);
-        double x = double(rand()) / RAND_MAX * width;
-        double y = double(rand()) / RAND_MAX * height;
-        particleInit(world->particles + i, particleType, x, y, 1);
+        double x = getRandomDouble() * width;
+        double y = getRandomDouble() * height;
+        particleInit(world->particles + i, PLAYER_PARTICLE_TYPE, x, y, playerSize, playerHp);
     }
 
-    memset(world->snappedParticles, 0, MAX_SNAP_KEY * sizeof(Particle *));
-
-    memset(world->activeSnapPoints, 0, sizeof(world->activeSnapPoints));
-    world->activeSnapPointCount = 0;
+    for (int i = 1 + world->config.botCount; i < PARTICLE_COUNT; i++)
+    {
+        int particleTypeIndex = 1;
+        double x = getRandomDouble() * width;
+        double y = getRandomDouble() * height;
+        ParticleType *particleType = world->particleTypes + particleTypeIndex;
+        particleInit(world->particles + i, particleTypeIndex, x, y, 1, particleType->defaultHp);
+    }
 
     double maxInteractionRadius = 0;
     for (int i = 0; i < PARTICLE_TYPE_COUNT; i++)
@@ -101,10 +77,15 @@ void worldInit(World *world, float scaleFactor, int width, int height)
         &world->particleSnapGrid, width, height, ceil(world->config.snapPointRadius),
         world->particles, world->particleSnapCellIndices, world->particlePosWithinSnapCell, PARTICLE_COUNT);
 
-    world->playerAngle = PI / 2;
-    world->playerAngleSin = sin(world->playerAngle);
-    world->playerAngleCos = cos(world->playerAngle);
-    world->playerLastShot = 0;
+    for (int i = 0; i < PLAYER_COUNT; i++)
+    {
+        playerInit(world->players + i, world->particles + i);
+    }
+
+    for (int i = 0; i < BOT_COUNT; i++)
+    {
+        botInit(world->bots + i, world->players + i + 1, &world->config);
+    }
 }
 
 struct SnapPointPos
@@ -113,16 +94,16 @@ struct SnapPointPos
     double y;
 };
 
-SnapPointPos snapPointGetPos(SnapPoint snapPoint, World *world)
+SnapPointPos snapPointGetPos(SnapPoint snapPoint, Player *player)
 {
     double snapStep = 3;
-    double playerSideAngleCos = world->playerAngleSin;
-    double playerSideAngleSin = -world->playerAngleCos;
-    double snapPointX = world->particles[0].x;
-    double snapPointY = world->particles[0].y;
+    double playerSideAngleCos = player->angleSin;
+    double playerSideAngleSin = -player->angleCos;
+    double snapPointX = player->particle->x;
+    double snapPointY = player->particle->y;
     snapPointX += snapPoint.u * playerSideAngleCos * snapStep;
     snapPointY -= snapPoint.u * playerSideAngleSin * snapStep;
-    snapPointX += snapPoint.v * world->playerAngleCos * snapStep;
-    snapPointY -= snapPoint.v * world->playerAngleSin * snapStep;
+    snapPointX += snapPoint.v * player->angleCos * snapStep;
+    snapPointY -= snapPoint.v * player->angleSin * snapStep;
     return {snapPointX, snapPointY};
 }
