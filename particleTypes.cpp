@@ -3,10 +3,13 @@
 #include "config.cpp"
 #include "raylib.h"
 
-#define PARTICLE_TYPE_COUNT 3
+#define PARTICLE_TYPE_COUNT 5
+
 #define PLAYER_PARTICLE_TYPE 0
 #define ARMOR_PARTICLE_TYPE 1
 #define BULLET_PARTICLE_TYPE 2
+#define SHIELD_PARTICLE_TYPE 3
+#define MISSILE_PARTICLE_TYPE 4
 
 struct ParticleType
 {
@@ -51,8 +54,8 @@ void initParticleTypesRandom(ParticleType *particleTypes, Config *config)
         for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
         {
             double randForce = useSinForce
-                ? sin(PI * getRandomDouble())
-                : getRandomDouble();
+                                   ? sin(PI * getRandomDouble())
+                                   : getRandomDouble();
             particleTypes[i].force[j] = maxForce * (-1.0 + 2.0 * randForce);
             particleTypes[i].radius[j] = config->baseRepelRadius + maxInteractionRadius * getRandomDouble();
         }
@@ -69,6 +72,8 @@ void initParticleTypes(ParticleType *particleTypes)
 
     particleTypes[0].color = Color({127, 127, 127, 255}); // Player
     particleTypes[1].color = Color({255, 255, 0, 255});   // Armor
+    particleTypes[2].color = Color({255, 0, 0, 255});     // Bullet
+    particleTypes[2].color = Color({0, 255, 255, 255});   // Shield
     particleTypes[2].color = Color({255, 0, 0, 255});     // Bullet
 
     particleTypes[0].force[0] = 0;
@@ -124,7 +129,7 @@ void saveParticleTypes(ParticleType *particleTypes, int slot)
         fprintf(file, "%f - %i_friction\n", particleTypes[i].friction, i);
         fprintf(file, "%i - %i_steps\n", int(particleTypes[i].steps / PHYSICS_STEPS_PER_FRAME), i);
         fprintf(file, "%i - %i_isSnappable\n", particleTypes[i].isSnappable, i);
-        
+
         for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
         {
             fprintf(file, "%f - force_%i<-%i\n", particleTypes[i].force[j], i, j);
@@ -155,7 +160,7 @@ void loadParticleTypes(ParticleType *particleTypes, int slot)
         int isSnappable;
         fscanf(file, "%i - %*s\n", &isSnappable);
         particleTypes[i].isSnappable = isSnappable;
-        
+
         for (int j = 0; j < PARTICLE_TYPE_COUNT; j++)
         {
             float force;

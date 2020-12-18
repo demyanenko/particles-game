@@ -28,6 +28,8 @@ struct World
     int particlePosWithinSnapCell[PARTICLE_COUNT];
     Player players[PLAYER_COUNT];
     Bot bots[BOT_COUNT];
+    int humanScore;
+    int botScore;
 };
 
 void worldInit(World *world, float scaleFactor, int width, int height)
@@ -86,6 +88,9 @@ void worldInit(World *world, float scaleFactor, int width, int height)
     {
         botInit(world->bots + i, world->players + i + 1, &world->config);
     }
+
+    world->humanScore = 0;
+    world->botScore = 0;
 }
 
 struct SnapPointPos

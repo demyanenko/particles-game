@@ -98,4 +98,14 @@ void worldRender(World *world)
         int(playerParticle->y * scaleFactor),
         playerParticle->radius *scaleFactor,
         Color({0, 0, 255, 63}));
+
+    if (world->config.botCount > 0)
+    {
+        DrawRectangle(world->config.width * scaleFactor + 50, 600, 300, 100, BLACK);
+        char scoreLine[100];
+        snprintf(scoreLine, 100, "HUMAN: %i", world->humanScore);
+        DrawText(scoreLine, world->config.width * scaleFactor + 50, 600, 30, WHITE);
+        snprintf(scoreLine, 100, "BOTS : %i", world->botScore);
+        DrawText(scoreLine, world->config.width * scaleFactor + 50, 640, 30, WHITE);
+    }
 }

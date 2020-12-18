@@ -477,6 +477,15 @@ void worldUpdate(
             particles[i].hp -= damageTaken[i];
             if (particles[i].hp <= 0)
             {
+                if (i == 0)
+                {
+                    world->botScore++;
+                }
+                else if (i < 1 + BOT_COUNT)
+                {
+                    world->humanScore++;
+                }
+                
                 int particleTypeIndex = particles[i].type == BULLET_PARTICLE_TYPE
                                             ? ARMOR_PARTICLE_TYPE
                                             : particles[i].type;

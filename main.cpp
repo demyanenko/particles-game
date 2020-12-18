@@ -192,16 +192,17 @@ int main()
 		worldRender(&world);
 		double worldRenderEnd = GetTime();
 		double worldRenderTime = worldRenderEnd - worldRenderStart;
+		
+		DrawRectangle(rawWidth, 0, windowWidth - rawWidth, sidebarInset, BLACK);
 
 		int fps = GetFPS();
-
 		char overlayText[100];
 		snprintf(overlayText, sizeof(overlayText) - 1, "FPS %i", fps);
-		DrawText(overlayText, overlayInset, overlayInset, overlayFontSize, WHITE);
+		DrawText(overlayText, rawWidth + sidebarInset + overlayInset, overlayInset, overlayFontSize, WHITE);
 
 		DrawRectangle(rawWidth, 0, sidebarInset, windowHeight, BLACK);
 		perfSidebar.render(
-			rawWidth + sidebarInset, sidebarInset,
+			rawWidth + sidebarInset, sidebarInset, windowWidth - rawWidth - sidebarInset,
 			worldUpdateTime, updateParticleInteractionsTime, updateSnappedParticlesTime,
 			applySnapPointsTime, worldRenderTime);
 

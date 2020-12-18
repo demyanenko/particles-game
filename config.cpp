@@ -52,7 +52,7 @@ void configInit(Config *config, float scaleFactor, int width, int height)
     config->backgroundTransparency = 0.1;
     unsigned char backgroundAlpha = (1 - config->backgroundTransparency) * 255;
     config->backgroundColor = Color({0, 0, 0, backgroundAlpha});
-    config->playerReloadTime = 0.1;
+    config->playerReloadTime = 0.2;
     config->bulletSpeed = 500;
     config->botCount = BOT_COUNT;
     config->botMinSnappedParticles = 20;

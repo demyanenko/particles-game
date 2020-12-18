@@ -11,7 +11,6 @@ struct PerfSidebar
     int currentSample;
     int xScale = 6;
     int yScale = 2;
-    double width = 200;
 
     PerfSidebar()
     {
@@ -19,7 +18,7 @@ struct PerfSidebar
     }
 
     void render(
-        int x, int y, double worldUpdateTime, double updateParticleInteractionsTime,
+        int x, int y, int width, double worldUpdateTime, double updateParticleInteractionsTime,
         double updateSnappedParticlesTime, double applySnapPointsTime, double worldRenderTime)
     {
         int updateParticleInteractionsSample = updateParticleInteractionsTime * 1000 * xScale;
