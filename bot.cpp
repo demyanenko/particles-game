@@ -89,47 +89,37 @@ void navigateToEndpoint(Bot *bot, Config *config, bool *outIsTowardsEndpoint, in
 PlayerInput botUpdate(Bot *bot, Particle *humanPlayerParticle, Config *config)
 {
     Particle *particle = bot->player->particle;
+    int snappedParticleCount = countSnappedParticles(bot);
+    if (snappedParticleCount < config->botMinSnappedParticles)
+    {
+        bot->state = BotState::Grow;
+    }
+    else if (isHumanClose(particle, humanPlayerParticle, config))
+    {
+        bot->state = BotState::Attack;
+    }
+    else if (snappedParticleCount >= config->botMaxSnappedParticles)
+    {
+        bot->state = BotState::SeekEnemy;
+    }
+    else
+    {
+        bot->state = BotState::Grow;
+    }
+
     switch (bot->state)
     {
     case BotState::Grow:
     {
-        int snappedParticleCount = countSnappedParticles(bot);
-        GrowthMode growthMode;
-        if (isHumanClose(particle, humanPlayerParticle, config) &&
-            snappedParticleCount >= config->botMinSnappedParticles)
-        {
-            bot->state = BotState::Attack;
-            growthMode = GrowthMode::Maintaining;
-        }
-        else if (snappedParticleCount >= config->botMaxSnappedParticles)
-        {
-            bot->state = BotState::SeekEnemy;
-            growthMode = GrowthMode::Maintaining;
-        }
-        else
-        {
-            growthMode = GrowthMode::Growing;
-        }
-
         bool isTowardsEndpoint;
         int angleDelta;
         navigateToEndpoint(bot, config, &isTowardsEndpoint, &angleDelta);
 
-        return playerInputCreate(isTowardsEndpoint, angleDelta, growthMode, false, 0, 0);
+        return playerInputCreate(isTowardsEndpoint, angleDelta, GrowthMode::Growing, false, 0, 0);
     }
 
     case BotState::SeekEnemy:
     {
-        int snappedParticleCount = countSnappedParticles(bot);
-        if (snappedParticleCount < config->botMinSnappedParticles)
-        {
-            bot->state = BotState::Grow;
-        }
-        else if (isHumanClose(particle, humanPlayerParticle, config))
-        {
-            bot->state = BotState::Attack;
-        }
-
         bool isTowardsEndpoint;
         int angleDelta;
         navigateToEndpoint(bot, config, &isTowardsEndpoint, &angleDelta);
@@ -138,12 +128,6 @@ PlayerInput botUpdate(Bot *bot, Particle *humanPlayerParticle, Config *config)
 
     case BotState::Attack:
     {
-        int snappedParticleCount = countSnappedParticles(bot);
-        if (snappedParticleCount < config->botMinSnappedParticles)
-        {
-            bot->state = BotState::Grow;
-        }
-
         double humanDeltaX = humanPlayerParticle->x - particle->x;
         double humanDeltaY = humanPlayerParticle->y - particle->y;
         double humanDistanceSq = humanDeltaX * humanDeltaX + humanDeltaY * humanDeltaY;
