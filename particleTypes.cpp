@@ -32,7 +32,7 @@ void initParticleTypesRandom(ParticleType *particleTypes, Config *config)
     for (int i = 0; i < PARTICLE_TYPE_COUNT; i++)
     {
         particleTypes[0].force[i] = 0;
-        particleTypes[0].radius[i] = 1;
+        particleTypes[0].radius[i] = 40;
     }
 
     particleTypes[0].friction = regularFriction;
