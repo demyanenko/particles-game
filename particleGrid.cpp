@@ -7,7 +7,7 @@
 
 struct ParticleCell
 {
-    Particle **particles;
+    Particle **particles = NULL;
     int count;
     int capacity;
 };
@@ -61,7 +61,7 @@ struct ParticleGrid
     int columnCount;
     int rowCount;
     int cellSize;
-    ParticleCell *particleCells;
+    ParticleCell *particleCells = NULL;
 };
 
 ParticleCellCoord particleGridGetCellCoord(ParticleGrid *particleGrid, double x, double y)
@@ -94,14 +94,24 @@ void particleGridInit(
     ParticleGrid *particleGrid, int width, int height, int cellSize, Particle *particles,
     int *particleCellIndices, int *particlePosWithinCell, int particleCount)
 {
-    particleGrid->columnCount = ceilf((float)(width) / cellSize);
-    particleGrid->rowCount = ceilf((float)(height) / cellSize);
-    particleGrid->cellSize = cellSize;
-    int cellCount = particleGrid->columnCount * particleGrid->rowCount;
-    particleGrid->particleCells = (ParticleCell *)malloc(sizeof(ParticleCell) * cellCount);
-    for (int i = 0; i < cellCount; i++)
+    if (particleGrid->particleCells != NULL)
     {
-        particleCellInit(particleGrid->particleCells + i, particleCount);
+        for (int i = 0; i < particleGrid->columnCount * particleGrid->rowCount; i++)
+        {
+            particleGrid->particleCells[i].count = 0;
+        }
+    }
+    else
+    {
+        particleGrid->columnCount = ceilf((float)(width) / cellSize);
+        particleGrid->rowCount = ceilf((float)(height) / cellSize);
+        particleGrid->cellSize = cellSize;
+        int cellCount = particleGrid->columnCount * particleGrid->rowCount;
+        particleGrid->particleCells = (ParticleCell *)malloc(sizeof(ParticleCell) * cellCount);
+        for (int i = 0; i < cellCount; i++)
+        {
+            particleCellInit(particleGrid->particleCells + i, particleCount);
+        }
     }
     for (int i = 0; i < particleCount; i++)
     {

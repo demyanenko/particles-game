@@ -1226,13 +1226,13 @@ function Clusters() {
         ;this.clearVelocities()
     }
     ;
-    this.initializeAsDisk = function(_0x536bx61) {
+    this.initializeAsDisk = function(_maxDistanceFromCenter) {
         for (var i = 0; i < _particleCount; i++) {
-            var _0x536bx65 = Math.random();
-            var _0x536bx66 = Math.sqrt(Math.random()) * _0x536bx61;
-            var _0x536bx67 = _0x536bx65 * Math.PI * 2.0;
-            _particles[i].x = _width / 2.0 + _0x536bx66 * Math.sin(_0x536bx67);
-            _particles[i].y = _height / 2.0 + _0x536bx66 * Math.cos(_0x536bx67)
+            var _randomValue = Math.random();
+            var _distanceFromCenter = Math.sqrt(Math.random()) * _maxDistanceFromCenter;
+            var _angleFromCenter = _randomValue * Math.PI * 2.0;
+            _particles[i].x = _width / 2.0 + _distanceFromCenter * Math.sin(_angleFromCenter);
+            _particles[i].y = _height / 2.0 + _distanceFromCenter * Math.cos(_angleFromCenter)
         }
         ;this.clearVelocities()
     }

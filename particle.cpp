@@ -1,6 +1,9 @@
 #pragma once
 
-#define MAX_STEPS 4
+#include "config.cpp"
+#include "particleTypes.cpp"
+
+#define MAX_STEPS_PER_FRAME (MAX_STEPS * PHYSICS_STEPS_PER_FRAME)
 
 struct Particle
 {
@@ -11,8 +14,8 @@ struct Particle
     double y;
     double xv;
     double yv;
-    double xa[MAX_STEPS];
-    double ya[MAX_STEPS];
+    double xa[MAX_STEPS_PER_FRAME];
+    double ya[MAX_STEPS_PER_FRAME];
     bool isSnapped;
     bool isEdge;
 };
@@ -26,7 +29,7 @@ void particleInit(Particle *particle, int type, double x, double y, float size)
     particle->y = y;
     particle->xv = 0;
     particle->yv = 0;
-    for (int i = 0; i < MAX_STEPS; i++)
+    for (int i = 0; i < MAX_STEPS_PER_FRAME; i++)
     {
         particle->xa[i] = 0;
         particle->ya[i] = 0;

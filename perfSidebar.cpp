@@ -32,7 +32,7 @@ struct PerfSidebar
         int worldRenderSample = worldRenderTime * 1000 * xScale;
 
         int nextSample = (currentSample + 1) % PERF_SAMPLES;
-        DrawRectangle(x, y + nextSample * yScale, width, yScale, BLACK);
+        DrawRectangle(x, y + nextSample * yScale, width, 2 * yScale, BLACK);
 
         float sampleX = x;
         float sampleY = y + currentSample * yScale;

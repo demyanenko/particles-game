@@ -1,15 +1,42 @@
 #include <stdio.h>
+#include <vector>
 #include "perfSidebar.cpp"
 #include "raylib.h"
 #include "world.cpp"
 #include "worldRender.cpp"
 #include "worldUpdate.cpp"
 
+void printParticleTypes(World *world, std::vector<int> requestedTypes)
+{
+	printf("t\tst\t");
+	for (int j = 0; j < int(requestedTypes.size()); j++)
+	{
+		printf("%i_f\t%i_r\t", requestedTypes[j], requestedTypes[j]);
+	}
+	printf("\n");
+
+	for (int i = 0; i < int(requestedTypes.size()); i++)
+	{
+		printf(
+			"%i\t%i\t",
+			requestedTypes[i],
+			int(world->particleTypes[requestedTypes[i]].steps / world->config.physicsStepsPerFrame));
+		for (int j = 0; j < int(requestedTypes.size()); j++)
+		{
+			printf(
+				"%lf\t%lf\t",
+				world->particleTypes[requestedTypes[i]].force[requestedTypes[j]],
+				world->particleTypes[requestedTypes[i]].radius[requestedTypes[j]]);
+		}
+		printf("\n");
+	}
+}
+
 int main()
 {
-	float scaleFactor = 8;
-	int width = 250;
-	int height = 250;
+	float scaleFactor = 5;
+	int width = 400;
+	int height = 400;
 	int rawWidth = width * scaleFactor;
 	int sidebarRawWidth = 300;
 	int windowWidth = rawWidth + sidebarRawWidth;
@@ -39,6 +66,47 @@ int main()
 										  ? GrowthMode::Shedding
 										  : GrowthMode::Maintaining;
 		int isPlayerShooting = IsMouseButtonDown(0);
+
+		if (IsKeyPressed(KEY_R))
+		{
+			worldInit(&world, scaleFactor, width, height);
+		}
+
+		if (IsKeyPressed(KEY_P))
+		{
+			std::vector<int> requestedParticleTypes;
+			if (IsKeyDown(KEY_ONE))
+			{
+				requestedParticleTypes.push_back(1);
+			}
+			if (IsKeyDown(KEY_TWO))
+			{
+				requestedParticleTypes.push_back(2);
+			}
+			if (IsKeyDown(KEY_THREE))
+			{
+				requestedParticleTypes.push_back(3);
+			}
+			if (IsKeyDown(KEY_FOUR))
+			{
+				requestedParticleTypes.push_back(4);
+			}
+			if (IsKeyDown(KEY_FIVE))
+			{
+				requestedParticleTypes.push_back(5);
+			}
+			if (IsKeyDown(KEY_SIX))
+			{
+				requestedParticleTypes.push_back(6);
+			}
+			printParticleTypes(&world, requestedParticleTypes);
+		}
+
+		if (IsKeyPressed(KEY_B))
+		{
+			// Breakpoint
+			int a = 0;
+		}
 
 		double updateParticleInteractionsTime, updateSnappedParticlesTime, applySnapPointsTime;
 		double worldUpdateStart = GetTime();

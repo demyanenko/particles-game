@@ -21,11 +21,12 @@ struct Config
     double playerReloadTime;
 };
 
+#define PHYSICS_STEPS_PER_FRAME 12
 #define MAX_SNAP_DEPTH 20
 
 void configInit(Config *config, float scaleFactor, int width, int height)
 {
-    config->physicsStepsPerFrame = 12;
+    config->physicsStepsPerFrame = PHYSICS_STEPS_PER_FRAME;
     config->dt = 1.0 / 60 / config->physicsStepsPerFrame;
     config->baseRepelRadius = 1.5;
     config->baseRepelFactor = 3600;

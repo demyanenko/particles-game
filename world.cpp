@@ -9,7 +9,7 @@
 #include "particleGrid.cpp"
 #include "particleTypes.cpp"
 
-#define PARTICLE_COUNT 250
+#define PARTICLE_COUNT 640
 #define SNAP_POINT_COUNT (PARTICLE_COUNT * 4 + 2)
 
 struct SnapPoint
@@ -59,20 +59,26 @@ void worldInit(World *world, float scaleFactor, int width, int height)
 {
     configInit(&world->config, scaleFactor, width, height);
 
-    initParticleTypes(world->particleTypes);
+    initParticleTypesRandom(world->particleTypes, &world->config);
 
     particleInit(world->particles, 0, width / 2, height / 2, 4);
-
     srand(time(0));
     for (int i = 1; i < PARTICLE_COUNT; i++)
     {
-        int particleType = 1;
+        int particleType = i < 0.8 * PARTICLE_COUNT
+                               ? 1
+                               : i < 0.9 * PARTICLE_COUNT
+                                     ? 3
+                                     : 4;
+        particleType = 1 + i % (PARTICLE_TYPE_COUNT - 1);
         double x = double(rand()) / RAND_MAX * width;
         double y = double(rand()) / RAND_MAX * height;
         particleInit(world->particles + i, particleType, x, y, 1);
     }
 
     memset(world->snappedParticles, 0, MAX_SNAP_KEY * sizeof(Particle *));
+
+    memset(world->activeSnapPoints, 0, sizeof(world->activeSnapPoints));
     world->activeSnapPointCount = 0;
 
     double maxInteractionRadius = 0;
@@ -96,6 +102,8 @@ void worldInit(World *world, float scaleFactor, int width, int height)
         world->particles, world->particleSnapCellIndices, world->particlePosWithinSnapCell, PARTICLE_COUNT);
 
     world->playerAngle = PI / 2;
+    world->playerAngleSin = sin(world->playerAngle);
+    world->playerAngleCos = cos(world->playerAngle);
     world->playerLastShot = 0;
 }
 
