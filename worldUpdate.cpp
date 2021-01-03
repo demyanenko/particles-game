@@ -395,38 +395,6 @@ Particle *popClosestSnappedParticle(Player *player, double x, double y)
     }
 }
 
-int compareInts(const void *a, const void *b)
-{
-    return *(int *)(a) - *(int *)(b);
-}
-
-void validateParticleGrid(ParticleGrid *particleGrid, int *particlePosWithinCell, Particle *particles)
-{
-    int totalParticlesInCells = 0;
-    int particlePositions[PARTICLE_COUNT];
-    for (int i = 0; i < particleGrid->rowCount * particleGrid->columnCount; i++)
-    {
-        totalParticlesInCells += particleGrid->particleCells[i].count;
-        for (int j = 0; j < particleGrid->particleCells[i].count; j++)
-        {
-            int particleIndex = particleGrid->particleCells[i].particles[j] - particles;
-            particlePositions[j] = particlePosWithinCell[particleIndex];
-        }
-        qsort(particlePositions, particleGrid->particleCells[i].count, sizeof(int), compareInts);
-        for (int j = 0; j < particleGrid->particleCells[i].count - 1; j++)
-        {
-            if (particlePositions[j + 1] - particlePositions[j] != 1)
-            {
-                abortWithMessage("Particle positions inconsistent");
-            }
-        }
-    }
-    if (totalParticlesInCells != PARTICLE_COUNT)
-    {
-        abortWithMessage("Particle count inconsistent");
-    }
-}
-
 void worldUpdate(
     World *world, PlayerInput humanPlayerInput, double *outUpdateParticleInteractionsTime,
     double *outUpdateSnappedParticlesTime, double *outApplySnapPointsTime)
@@ -552,9 +520,6 @@ void worldUpdate(
             particleGridUpdateCell(
                 &world->particleSnapGrid, world->particles, particle, world->particleSnapCellIndices + i, world->particlePosWithinSnapCell);
         }
-
-        validateParticleGrid(&world->particleGrid, world->particlePosWithinCell, world->particles);
-        validateParticleGrid(&world->particleSnapGrid, world->particlePosWithinSnapCell, world->particles);
     }
 
     double now = GetTime();

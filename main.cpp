@@ -49,8 +49,8 @@ int main()
 	World world;
 	worldInit(&world, scaleFactor, width, height);
 	PerfSidebar perfSidebar;
-	
-    srand(time(0));
+
+	srand(time(0));
 
 	InitWindow(windowWidth, windowHeight, "Window");
 	SetTargetFPS(60);
@@ -160,8 +160,11 @@ int main()
 		if (IsKeyPressed(KEY_B))
 		{
 			// Breakpoint
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-assign"
 			int a = 0;
 			a = a;
+#pragma clang diagnostic pop
 		}
 
 		int playerAngleDelta = (int)(IsKeyDown(KEY_A)) - (int)(IsKeyDown(KEY_D));
@@ -192,7 +195,7 @@ int main()
 		worldRender(&world);
 		double worldRenderEnd = GetTime();
 		double worldRenderTime = worldRenderEnd - worldRenderStart;
-		
+
 		DrawRectangle(rawWidth, 0, windowWidth - rawWidth, sidebarInset, BLACK);
 
 		int fps = GetFPS();
