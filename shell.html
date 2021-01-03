@@ -13,6 +13,10 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
         }
 
+        body>div {
+            user-select: none;
+        }
+
         a:link,
         a:visited {
             color: lightgray;
@@ -52,11 +56,11 @@
 <body>
     <div>
         <div id="nav">
-            <a id="just_me" href="../just-me/index.html"><span>Just Me</span></a>
-            <a id="1_bot" href="../1-bot/index.html"><span>1 Bot</span></a>
-            <a id="2_bots" href="../2-bots/index.html"><span>2 Bots</span></a>
+            <a id="just-me" href="../just-me/index.html"><span>Just Me</span></a>
+            <a id="1-bot" href="../1-bot/index.html"><span>1 Bot</span></a>
+            <a id="2-bots" href="../2-bots/index.html"><span>2 Bots</span></a>
         </div>
-        <canvas class="emscripten" id="canvas" tabindex=-1></canvas>
+        <canvas class="emscripten" id="canvas" autofocus></canvas>
         <div>Move: WAD</div>
         <div>Grow: hold Space</div>
         <div>Shed: C</div>
@@ -64,11 +68,11 @@
     </div>
     <script>
         if (window.location.href.includes("just-me")) {
-            document.getElementById("just_me").classList.add("current");
+            document.getElementById("just-me").classList.add("current");
         } else if (window.location.href.includes("1-bot")) {
-            document.getElementById("1_bot").classList.add("current");
+            document.getElementById("1-bot").classList.add("current");
         } else if (window.location.href.includes("2-bots")) {
-            document.getElementById("2_bots").classList.add("current");
+            document.getElementById("2-bots").classList.add("current");
         }
 
         var Module = {
