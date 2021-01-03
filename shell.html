@@ -52,9 +52,9 @@
 <body>
     <div>
         <div id="nav">
-            <a id="just_me" href="../just_me/index.html"><span>Just Me</span></a>
-            <a id="1_bot" href="../1_bot/index.html"><span>1 Bot</span></a>
-            <a id="2_bots" href="../2_bots/index.html"><span>2 Bots</span></a>
+            <a id="just_me" href="../just-me/index.html"><span>Just Me</span></a>
+            <a id="1_bot" href="../1-bot/index.html"><span>1 Bot</span></a>
+            <a id="2_bots" href="../2-bots/index.html"><span>2 Bots</span></a>
         </div>
         <canvas class="emscripten" id="canvas" tabindex=-1></canvas>
         <div>Move: WAD</div>
@@ -63,12 +63,12 @@
         <div>Shoot: Left mouse button</div>
     </div>
     <script>
-        if (window.location.href.includes("just_me")) {
-            document.querySelector("#just_me").classList.add("current");
-        } else if (window.location.href.includes("1_bot.html")) {
-            document.querySelector("#1_bot").classList.add("current");
-        } else if (window.location.href.includes("2_bots.html")) {
-            document.querySelector("#2_bots").classList.add("current");
+        if (window.location.href.includes("just-me")) {
+            document.getElementById("just_me").classList.add("current");
+        } else if (window.location.href.includes("1-bot")) {
+            document.getElementById("1_bot").classList.add("current");
+        } else if (window.location.href.includes("2-bots")) {
+            document.getElementById("2_bots").classList.add("current");
         }
 
         var Module = {

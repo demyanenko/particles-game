@@ -15,11 +15,11 @@ set WASM_ARGS=main.cpp -lglfw -s USE_GLFW=3 -s ALLOW_MEMORY_GROWTH=1 -s ASYNCIFY
 rmdir /s /q out
 mkdir out
 
-call mkdir out\just_me
-call emcc %WASM_ARGS% -DDEMO_WASM_JUSTME -o out\just_me\index.html
+call mkdir out\just-me
+call emcc %WASM_ARGS% -DDEMO_WASM_JUSTME -o out\just-me\index.html
 
-call mkdir out\1_bot
-call emcc %WASM_ARGS% -DDEMO_WASM_1BOT -o out\1_bot\index.html
+call mkdir out\1-bot
+call emcc %WASM_ARGS% -DDEMO_WASM_1BOT -o out\1-bot\index.html
 
-call mkdir out\2_bots
-call emcc %WASM_ARGS% -DDEMO_WASM_2BOTS -o out\2_bots\index.html
+call mkdir out\2-bots
+call emcc %WASM_ARGS% -DDEMO_WASM_2BOTS -o out\2-bots\index.html
