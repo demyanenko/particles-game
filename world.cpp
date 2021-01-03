@@ -11,8 +11,6 @@
 #include "particleTypes.cpp"
 #include "player.cpp"
 
-#define PARTICLE_COUNT 640
-
 #define PLAYER_COUNT (1 + BOT_COUNT)
 
 struct World
@@ -52,7 +50,28 @@ void worldInit(World *world, float scaleFactor, int width, int height)
 
     for (int i = 1 + world->config.botCount; i < PARTICLE_COUNT; i++)
     {
-        int particleTypeIndex = 1;
+        int particleTypeIndex;
+        if (NEW_PARTICLE_GEN)
+        {
+            double random = getRandomDouble();
+            if (random < 0.98)
+            {
+                particleTypeIndex = ARMOR_PARTICLE_TYPE;
+            }
+            else if (random < 0.99)
+            {
+                particleTypeIndex = SHIELD_PARTICLE_TYPE;
+            }
+            else
+            {
+                particleTypeIndex = IDLE_MISSILE_PARTICLE_TYPE;
+            }
+        }
+        else
+        {
+            particleTypeIndex = ARMOR_PARTICLE_TYPE;
+        }
+
         double x = getRandomDouble() * width;
         double y = getRandomDouble() * height;
         ParticleType *particleType = world->particleTypes + particleTypeIndex;

@@ -30,9 +30,37 @@ struct Config
     double botWaypointChangePeriod;
 };
 
+#define DEMO_2
+
+#ifdef DEMO_1
+#define BOT_COUNT 0
+#define SCALE_FACTOR 8
+#define WORLD_SIZE 250
+#define PARTICLE_COUNT 250
+#define PARTICLE_TYPE_COUNT 3
+#define NEW_PARTICLE_GEN 0
+#endif
+
+#ifdef DEMO_2
+#define BOT_COUNT 2
+#define SCALE_FACTOR 5
+#define WORLD_SIZE 400
+#define PARTICLE_COUNT 640
+#define PARTICLE_TYPE_COUNT 3
+#define NEW_PARTICLE_GEN 0
+#endif
+
+#ifdef DEMO_3
+#define BOT_COUNT 1
+#define SCALE_FACTOR 5
+#define WORLD_SIZE 400
+#define PARTICLE_COUNT 640
+#define PARTICLE_TYPE_COUNT 6
+#define NEW_PARTICLE_GEN 1
+#endif
+
 #define PHYSICS_STEPS_PER_FRAME 12
 #define MAX_SNAP_DEPTH 20
-#define BOT_COUNT 2
 
 void configInit(Config *config, float scaleFactor, int width, int height)
 {
@@ -53,7 +81,7 @@ void configInit(Config *config, float scaleFactor, int width, int height)
     unsigned char backgroundAlpha = (1 - config->backgroundTransparency) * 255;
     config->backgroundColor = Color({0, 0, 0, backgroundAlpha});
     config->playerReloadTime = 0.2;
-    config->bulletSpeed = 500;
+    config->bulletSpeed = 800;
     config->botCount = BOT_COUNT;
     config->botMinSnappedParticles = 20;
     config->botMaxSnappedParticles = 60;

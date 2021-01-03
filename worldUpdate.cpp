@@ -40,12 +40,20 @@ void updateParticleInteractions(World *world, ParticleType *particleType, int pa
             double collisionDistance = particle->radius + otherParticle->radius;
             int otherParticleIndex = otherParticle - particles;
             if (distanceSq < collisionDistance * collisionDistance &&
-                (particle->type == BULLET_PARTICLE_TYPE || otherParticle->type == BULLET_PARTICLE_TYPE) &&
                 damageTaken[particleIndex] == 0 &&
                 damageTaken[otherParticleIndex] == 0)
             {
-                damageTaken[particleIndex] = 1;
-                damageTaken[otherParticleIndex] = 1;
+                if (particle->type == BULLET_PARTICLE_TYPE || otherParticle->type == BULLET_PARTICLE_TYPE)
+                {
+                    damageTaken[particleIndex] = 1;
+                    damageTaken[otherParticleIndex] = 1;
+                }
+                else if (particle->type == SHOT_MISSILE_PARTICLE_TYPE || otherParticle->type == SHOT_MISSILE_PARTICLE_TYPE)
+                {
+                    int damage = min(particle->hp, otherParticle->hp);
+                    damageTaken[particleIndex] = damage;
+                    damageTaken[otherParticleIndex] = damage;
+                }
             }
 
             double repelDistance = config->baseRepelRadius * (particle->radius + otherParticle->radius);
@@ -485,10 +493,30 @@ void worldUpdate(
                 {
                     world->humanScore++;
                 }
-                
-                int particleTypeIndex = particles[i].type == BULLET_PARTICLE_TYPE
+
+                int particleTypeIndex;
+                if (NEW_PARTICLE_GEN)
+                {
+                    if (particles[i].type == BULLET_PARTICLE_TYPE)
+                    {
+                        particleTypeIndex = getRandomDouble() < 0.99 ? ARMOR_PARTICLE_TYPE : SHIELD_PARTICLE_TYPE;
+                    }
+                    else if (particles[i].type == SHOT_MISSILE_PARTICLE_TYPE)
+                    {
+                        particleTypeIndex = IDLE_MISSILE_PARTICLE_TYPE;
+                    }
+                    else
+                    {
+                        particleTypeIndex = particles[i].type;
+                    }
+                }
+                else
+                {
+                    particleTypeIndex = particles[i].type == BULLET_PARTICLE_TYPE
                                             ? ARMOR_PARTICLE_TYPE
                                             : particles[i].type;
+                }
+
                 double x = getRandomDouble() * world->config.width;
                 double y = getRandomDouble() * world->config.height;
                 ParticleType *particleType = &world->particleTypes[particleTypeIndex];
@@ -538,7 +566,14 @@ void worldUpdate(
             Particle *particleToShoot = popClosestSnappedParticle(player, playerInputs[i].mouseX, playerInputs[i].mouseY);
             if (particleToShoot != NULL)
             {
-                particleToShoot->type = 2;
+                if (particleToShoot->type == IDLE_MISSILE_PARTICLE_TYPE)
+                {
+                    particleToShoot->type = SHOT_MISSILE_PARTICLE_TYPE;
+                }
+                else
+                {
+                    particleToShoot->type = BULLET_PARTICLE_TYPE;
+                }
                 double deltaX = playerInputs[i].mouseX - particleToShoot->x;
                 double deltaY = playerInputs[i].mouseY - particleToShoot->y;
                 double distance = sqrt(deltaX * deltaX + deltaY * deltaY);

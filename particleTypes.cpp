@@ -3,18 +3,19 @@
 #include "config.cpp"
 #include "raylib.h"
 
-#define PARTICLE_TYPE_COUNT 5
+#define PARTICLE_TYPE_COUNT_MEM 6
 
 #define PLAYER_PARTICLE_TYPE 0
 #define ARMOR_PARTICLE_TYPE 1
 #define BULLET_PARTICLE_TYPE 2
 #define SHIELD_PARTICLE_TYPE 3
-#define MISSILE_PARTICLE_TYPE 4
+#define IDLE_MISSILE_PARTICLE_TYPE 4
+#define SHOT_MISSILE_PARTICLE_TYPE 5
 
 struct ParticleType
 {
-    float force[PARTICLE_TYPE_COUNT];
-    float radius[PARTICLE_TYPE_COUNT];
+    float force[PARTICLE_TYPE_COUNT_MEM];
+    float radius[PARTICLE_TYPE_COUNT_MEM];
     float steps;
     float friction;
     bool isSnappable;
@@ -73,16 +74,23 @@ void initParticleTypes(ParticleType *particleTypes)
     particleTypes[0].color = Color({127, 127, 127, 255}); // Player
     particleTypes[1].color = Color({255, 255, 0, 255});   // Armor
     particleTypes[2].color = Color({255, 0, 0, 255});     // Bullet
-    particleTypes[2].color = Color({0, 255, 255, 255});   // Shield
-    particleTypes[2].color = Color({255, 0, 0, 255});     // Bullet
+    particleTypes[3].color = Color({0, 255, 255, 255});   // Shield
+    particleTypes[4].color = Color({255, 0, 127, 255});   // Idle Missile
+    particleTypes[5].color = Color({255, 0, 255, 255});   // Shot Missile
 
     particleTypes[0].force[0] = 0;
     particleTypes[0].force[1] = 0;
     particleTypes[0].force[2] = 0;
+    particleTypes[0].force[3] = 0;
+    particleTypes[0].force[4] = 0;
+    particleTypes[0].force[5] = 0;
 
     particleTypes[0].radius[0] = 1;
     particleTypes[0].radius[1] = 1;
     particleTypes[0].radius[2] = 1;
+    particleTypes[0].radius[3] = 1;
+    particleTypes[0].radius[4] = 1;
+    particleTypes[0].radius[5] = 1;
 
     particleTypes[0].friction = regularFriction;
     particleTypes[0].steps = 0 * PHYSICS_STEPS_PER_FRAME;
@@ -92,10 +100,16 @@ void initParticleTypes(ParticleType *particleTypes)
     particleTypes[1].force[0] = 1800;
     particleTypes[1].force[1] = 36;
     particleTypes[1].force[2] = 36;
+    particleTypes[1].force[3] = 0;
+    particleTypes[1].force[4] = 0;
+    particleTypes[1].force[5] = 0;
 
     particleTypes[1].radius[0] = 18.5;
     particleTypes[1].radius[1] = 12;
     particleTypes[1].radius[2] = 12;
+    particleTypes[1].radius[3] = 1;
+    particleTypes[1].radius[4] = 1;
+    particleTypes[1].radius[5] = 1;
 
     particleTypes[1].friction = regularFriction;
     particleTypes[1].steps = 0 * PHYSICS_STEPS_PER_FRAME;
@@ -105,15 +119,78 @@ void initParticleTypes(ParticleType *particleTypes)
     particleTypes[2].force[0] = 1800;
     particleTypes[2].force[1] = 36;
     particleTypes[2].force[2] = 0;
+    particleTypes[2].force[3] = -20000;
+    particleTypes[2].force[4] = 0;
+    particleTypes[2].force[5] = 0;
 
     particleTypes[2].radius[0] = 18.5;
     particleTypes[2].radius[1] = 12;
     particleTypes[2].radius[2] = 1;
+    particleTypes[2].radius[3] = 30;
+    particleTypes[2].radius[4] = 1;
+    particleTypes[2].radius[5] = 1;
 
     particleTypes[2].friction = 0;
     particleTypes[2].steps = 0 * PHYSICS_STEPS_PER_FRAME;
     particleTypes[2].isSnappable = false;
     particleTypes[2].defaultHp = 1;
+
+    particleTypes[3].force[0] = 0;
+    particleTypes[3].force[1] = 0;
+    particleTypes[3].force[2] = 0;
+    particleTypes[3].force[3] = 0;
+    particleTypes[3].force[4] = 0;
+    particleTypes[3].force[5] = 0;
+
+    particleTypes[3].radius[0] = 1;
+    particleTypes[3].radius[1] = 1;
+    particleTypes[3].radius[2] = 1;
+    particleTypes[3].radius[3] = 1;
+    particleTypes[3].radius[4] = 1;
+    particleTypes[3].radius[5] = 1;
+
+    particleTypes[3].friction = regularFriction;
+    particleTypes[3].steps = 0 * PHYSICS_STEPS_PER_FRAME;
+    particleTypes[3].isSnappable = true;
+    particleTypes[3].defaultHp = 1;
+
+    particleTypes[4].force[0] = 0;
+    particleTypes[4].force[1] = 0;
+    particleTypes[4].force[2] = 0;
+    particleTypes[4].force[3] = 0;
+    particleTypes[4].force[4] = 0;
+    particleTypes[4].force[5] = 0;
+
+    particleTypes[4].radius[0] = 1;
+    particleTypes[4].radius[1] = 1;
+    particleTypes[4].radius[2] = 1;
+    particleTypes[4].radius[3] = 1;
+    particleTypes[4].radius[4] = 1;
+    particleTypes[4].radius[5] = 1;
+
+    particleTypes[4].friction = regularFriction;
+    particleTypes[4].steps = 0 * PHYSICS_STEPS_PER_FRAME;
+    particleTypes[4].isSnappable = true;
+    particleTypes[4].defaultHp = 5;
+
+    particleTypes[5].force[0] = 10000;
+    particleTypes[5].force[1] = 36;
+    particleTypes[5].force[2] = 0;
+    particleTypes[5].force[3] = 10000;
+    particleTypes[5].force[4] = 0;
+    particleTypes[5].force[5] = 0;
+
+    particleTypes[5].radius[0] = 100;
+    particleTypes[5].radius[1] = 12;
+    particleTypes[5].radius[2] = 1;
+    particleTypes[5].radius[3] = 100;
+    particleTypes[5].radius[4] = 1;
+    particleTypes[5].radius[5] = 1;
+
+    particleTypes[5].friction = 0;
+    particleTypes[5].steps = 0 * PHYSICS_STEPS_PER_FRAME;
+    particleTypes[5].isSnappable = false;
+    particleTypes[5].defaultHp = 10;
 }
 
 void saveParticleTypes(ParticleType *particleTypes, int slot)

@@ -34,9 +34,9 @@ void printParticleTypes(World *world, std::vector<int> requestedTypes)
 
 int main()
 {
-	float scaleFactor = 5;
-	int width = 400;
-	int height = 400;
+	float scaleFactor = SCALE_FACTOR;
+	int width = WORLD_SIZE;
+	int height = WORLD_SIZE;
 	int rawWidth = width * scaleFactor;
 	int sidebarRawWidth = 300;
 	int windowWidth = rawWidth + sidebarRawWidth;
