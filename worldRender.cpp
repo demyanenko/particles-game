@@ -12,28 +12,6 @@ void worldRender(World *world)
         world->config.height * scaleFactor,
         world->config.backgroundColor);
 
-    int cellIndices[MAX_NEIGHBOR_CELLS];
-    ParticleCellCoord playerCellCoord = particleGridGetCellCoord(
-        &world->particleGrid, world->particles[0].x, world->particles[0].y);
-    int cellCount = particleGridGetNeighborhoodIndices(
-        &world->particleGrid, playerCellCoord, cellIndices);
-    for (int i = 0; i < cellCount; i++)
-    {
-        ParticleCellCoord cellCoord =
-            particleGridCellIndexToCoord(&world->particleGrid, cellIndices[i]);
-        int cellX = cellCoord.column * world->particleGrid.cellSize;
-        int cellY = cellCoord.row * world->particleGrid.cellSize;
-        int cellWidth = min(world->particleGrid.cellSize, world->config.width - cellX);
-        int cellHeight = min(world->particleGrid.cellSize, world->config.height - cellY);
-        DrawRectangleLinesEx(
-            Rectangle({cellX * scaleFactor,
-                       cellY * scaleFactor,
-                       cellWidth * scaleFactor,
-                       cellHeight * scaleFactor}),
-            scaleFactor,
-            Color({255, 255, 255, 7}));
-    }
-
     for (int i = 0; i < PLAYER_COUNT; i++)
     {
         Player *player = world->players + i;
@@ -101,11 +79,22 @@ void worldRender(World *world)
 
     if (world->config.botCount > 0)
     {
+#ifdef WASM
+        float sizeAndOffset = 7 * scaleFactor;
+        Color scoreColor = {255, 255, 255, 192};
+        char scoreLine[100];
+        snprintf(scoreLine, 100, "HUMAN: %i", world->humanScore);
+        DrawText(scoreLine, sizeAndOffset, sizeAndOffset, sizeAndOffset, scoreColor);
+        const char *botScoreFormat = world->config.botCount == 1 ? "BOT: %i" : "BOTS: %i";
+        snprintf(scoreLine, 100, botScoreFormat, world->botScore);
+        DrawText(scoreLine, sizeAndOffset, 2.5 * sizeAndOffset, sizeAndOffset, scoreColor);
+#else
         DrawRectangle(world->config.width * scaleFactor + 50, 600, 300, 100, BLACK);
         char scoreLine[100];
         snprintf(scoreLine, 100, "HUMAN: %i", world->humanScore);
-        DrawText(scoreLine, world->config.width * scaleFactor + 50, 600, 30, WHITE);
+        DrawText(scoreLine, world->config.width * scaleFactor + 50, 50, 30, WHITE);
         snprintf(scoreLine, 100, "BOTS : %i", world->botScore);
-        DrawText(scoreLine, world->config.width * scaleFactor + 50, 640, 30, WHITE);
+        DrawText(scoreLine, world->config.width * scaleFactor + 50, 50, 30, WHITE);
+#endif
     }
 }

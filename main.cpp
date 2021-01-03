@@ -6,6 +6,11 @@
 #include "worldRender.cpp"
 #include "worldUpdate.cpp"
 
+#ifdef WASM
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
+
 void printParticleTypes(World *world, std::vector<int> requestedTypes)
 {
 	printf("t\tst\t");
@@ -34,17 +39,26 @@ void printParticleTypes(World *world, std::vector<int> requestedTypes)
 
 int main()
 {
+	int sidebarRawWidth = 300 * SHOW_SIDEBAR;
+#ifdef WASM
+	double devicePixelRatio = emscripten_get_device_pixel_ratio();
+	double bodyWidth, bodyHeight;
+	emscripten_get_element_css_size("body", &bodyWidth, &bodyHeight);
+	float scaleFactor = 1;
+	while ((scaleFactor + 1) * WORLD_SIZE + sidebarRawWidth < 0.9 * bodyWidth * devicePixelRatio &&
+		   (scaleFactor + 1) * WORLD_SIZE < 0.9 * bodyHeight * devicePixelRatio)
+	{
+		scaleFactor++;
+	}
+	printf("Scale factor: %f\n", scaleFactor);
+#else
 	float scaleFactor = SCALE_FACTOR;
+#endif
 	int width = WORLD_SIZE;
 	int height = WORLD_SIZE;
 	int rawWidth = width * scaleFactor;
-	int sidebarRawWidth = 300;
 	int windowWidth = rawWidth + sidebarRawWidth;
 	int windowHeight = height * scaleFactor;
-
-	int overlayFontSize = 30;
-	int overlayInset = 10;
-	int sidebarInset = 50;
 
 	World world;
 	worldInit(&world, scaleFactor, width, height);
@@ -54,6 +68,12 @@ int main()
 
 	InitWindow(windowWidth, windowHeight, "Window");
 	SetTargetFPS(60);
+
+#ifdef WASM
+	double displayWidth = windowWidth / devicePixelRatio;
+	double displayHeight = windowHeight / devicePixelRatio;
+	emscripten_set_element_css_size("#canvas", displayWidth, displayHeight);
+#endif
 
 	ClearBackground(BLACK);
 
@@ -186,7 +206,10 @@ int main()
 			&world, playerInput,
 			&updateParticleInteractionsTime, &updateSnappedParticlesTime, &applySnapPointsTime);
 		double worldUpdateEnd = GetTime();
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 		double worldUpdateTime = worldUpdateEnd - worldUpdateStart;
+#pragma clang diagnostic pop
 
 		// Draw
 		BeginDrawing();
@@ -194,8 +217,15 @@ int main()
 		double worldRenderStart = GetTime();
 		worldRender(&world);
 		double worldRenderEnd = GetTime();
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 		double worldRenderTime = worldRenderEnd - worldRenderStart;
+#pragma clang diagnostic pop
 
+#ifndef WASM
+		int overlayFontSize = 30;
+		int overlayInset = 10;
+		int sidebarInset = 50;
 		DrawRectangle(rawWidth, 0, windowWidth - rawWidth, sidebarInset, BLACK);
 
 		int fps = GetFPS();
@@ -208,6 +238,9 @@ int main()
 			rawWidth + sidebarInset, sidebarInset, windowWidth - rawWidth - sidebarInset,
 			worldUpdateTime, updateParticleInteractionsTime, updateSnappedParticlesTime,
 			applySnapPointsTime, worldRenderTime);
+#else
+		DrawRectangle(rawWidth, 0, windowWidth - rawWidth, windowHeight, BLACK);
+#endif
 
 		EndDrawing();
 	}

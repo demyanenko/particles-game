@@ -8,10 +8,18 @@ set EM_CACHE=C:/Portable/emsdk/upstream/emscripten\cache
 set EM_CONFIG=C:\Portable\emsdk\.emscripten
 set EM_PY=C:\Portable\emsdk\python\3.7.4-pywin32_64bit\python.exe
 set JAVA_HOME=C:\Portable\emsdk\java\8.152_64bit
-set RAYLIB_PATH=C:\raylib-gcc\raylib
 set RAYLIB_RELEASE_PATH=C:\raylib-gcc\raylib\src
 set PATH=C:\Portable\emsdk;C:\Portable\emsdk\upstream\emscripten;C:\Portable\emsdk\node\12.18.1_64bit\bin;C:\Portable\emsdk\python\3.7.4-pywin32_64bit;C:\Portable\emsdk\java\8.152_64bit\bin;%PATH%
+set WASM_ARGS=main.cpp -lglfw -s USE_GLFW=3 -s ALLOW_MEMORY_GROWTH=1 -s ASYNCIFY --shell-file shell.html -I%RAYLIB_RELEASE_PATH% %RAYLIB_RELEASE_PATH%\libraylib.bc -DWASM -Wall -O3 -g
 
-del /Q out\*
+rmdir /s /q out
 mkdir out
-emcc main.cpp -lglfw -s USE_GLFW=3 -s ALLOW_MEMORY_GROWTH=1 -s ASYNCIFY --shell-file %RAYLIB_PATH%\src\shell.html -I%RAYLIB_RELEASE_PATH% %RAYLIB_RELEASE_PATH%\libraylib.bc -s LLD_REPORT_UNDEFINED -Wall -Werror -O3 -g -o out\index.html
+
+call mkdir out\just_me
+call emcc %WASM_ARGS% -DDEMO_WASM_JUSTME -o out\just_me\index.html
+
+call mkdir out\1_bot
+call emcc %WASM_ARGS% -DDEMO_WASM_1BOT -o out\1_bot\index.html
+
+call mkdir out\2_bots
+call emcc %WASM_ARGS% -DDEMO_WASM_2BOTS -o out\2_bots\index.html
